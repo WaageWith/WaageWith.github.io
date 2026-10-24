@@ -98,7 +98,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .card-head .note.energy { color: var(--energy); font-weight: 600; }
 .week.up .bar { background: var(--warn); }
 .week.up .wval { color: var(--warn); }
-.week.now .bar { background: var(--good-soft); }
+.week.now .bar { background: color-mix(in srgb, var(--good) 14%, #fff); border: 1.5px dashed var(--good); box-sizing: border-box; }
 .week.now .wval, .week.now .wk b { color: var(--muted); }
 .more { align-self: flex-start; background: none; border: 0; padding: 0.25rem 0; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--accent); cursor: pointer; }
 .more:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
