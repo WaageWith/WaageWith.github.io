@@ -1,5 +1,5 @@
 // Offline-Unterstützung: App-Dateien aus dem Cache, Messdaten immer frisch aus dem Netz.
-const CACHE = 'withings-dashboard-v2';
+const CACHE = 'withings-dashboard-v3';
 const SHELL = ['./', 'index.html', 'd3.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
   'fonts/figtree-latin-400-normal.woff2', 'fonts/figtree-latin-500-normal.woff2', 'fonts/figtree-latin-600-normal.woff2',
   'fonts/figtree-latin-700-normal.woff2', 'fonts/figtree-latin-800-normal.woff2'];
@@ -15,9 +15,10 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   if (url.pathname.endsWith('data.enc.json') || url.pathname.endsWith('callback.html')) return; // immer Netz
-  // Netz zuerst, damit Updates sofort ankommen; Cache nur als Rückfall ohne Verbindung
+  // Netz zuerst und den Browser-Zwischenspeicher umgehen (GitHub erlaubt sonst 10 Minuten alte Versionen),
+  // damit Änderungen sofort ankommen. Der eigene Cache dient nur als Rückfall ohne Verbindung.
   e.respondWith(
-    fetch(e.request).then((res) => {
+    fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }).then((res) => {
       const copy = res.clone();
       caches.open(CACHE).then((c) => c.put(e.request, copy));
       return res;
