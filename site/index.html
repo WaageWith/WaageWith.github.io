@@ -281,7 +281,12 @@ function summary() {
 function drawTop(s) {
   // Zeitpunkt der letzten Messung, z. B. „23. Oktober 7:44 Uhr“
   const lz = pts[pts.length - 1].zeit;
-  $('meta').textContent = fLong.format(new Date(s.last)) + (lz ? ' ' + lz.replace(/^0/, '') + ' Uhr' : '');
+  // „Heute“ / „Gestern“ / „22. Oktober“ – nach deutscher Zeit
+  const isoBerlin = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(d);
+  const heute = Date.parse(isoBerlin(new Date()) + 'T00:00:00Z');
+  const tageHer = Math.round((heute - s.last) / DAY);
+  const tag = tageHer === 0 ? 'Heute' : tageHer === 1 ? 'Gestern' : fLong.format(new Date(s.last));
+  $('meta').textContent = tag + (lz ? ' ' + lz.replace(/^0/, '') + ' Uhr' : '');
   const diff = s.start.w - s.lastW;
   const withUnit = (id, txt, unit) => {
     const sign = /^[−+]/.test(txt) ? txt[0] : '';
