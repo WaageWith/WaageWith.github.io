@@ -27,7 +27,7 @@
   --mark: #8c95a4;
   --accent: #2457d6;
   --accent-soft: #c9d7f7;
-  --warn: #a8520a;
+  --warn: #c2321b;
   --good: #12895a;
   --good-ink: #0a5c3b;
   --good-soft: #86c9a9;
@@ -37,10 +37,10 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0e1117; --panel: #161a22; --fg: #e8ebf1; --muted: #a7aebb; --line: #333a46; --grid: #252b35; --mark: #6b7484;
-  --accent: #82a6ff; --accent-soft: #2a3a5e; --warn: #f0a25e; --good: #4fcf95; --good-ink: #6fe0ab; --good-soft: #2b6b4f; --energy: #b39cff; --shadow: none; color-scheme: dark; } }
+  --accent: #82a6ff; --accent-soft: #2a3a5e; --warn: #ff7a66; --good: #4fcf95; --good-ink: #6fe0ab; --good-soft: #2b6b4f; --energy: #b39cff; --shadow: none; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #0e1117; --panel: #161a22; --fg: #e8ebf1; --muted: #a7aebb; --line: #333a46; --grid: #252b35; --mark: #6b7484;
-  --accent: #82a6ff; --accent-soft: #2a3a5e; --warn: #f0a25e; --good: #4fcf95; --good-ink: #6fe0ab; --good-soft: #2b6b4f; --energy: #b39cff; --shadow: none; color-scheme: dark; }
+  --accent: #82a6ff; --accent-soft: #2a3a5e; --warn: #ff7a66; --good: #4fcf95; --good-ink: #6fe0ab; --good-soft: #2b6b4f; --energy: #b39cff; --shadow: none; color-scheme: dark; }
 
 body { background: var(--bg); color: var(--fg); font-family: var(--sans); margin: 0; -webkit-font-smoothing: antialiased; }
 .wrap { max-width: 60rem; margin-inline: auto; padding-block: 2rem 3rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 1rem; }
@@ -98,8 +98,9 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .trackcell .track { width: 100%; }
 .bar { height: 100%; border-radius: 6px; background: var(--good); min-width: 4px; }
 .wval { align-items: flex-end; padding-left: 1rem; font-weight: 800; font-size: 1.375rem; letter-spacing: -0.01em; white-space: nowrap; }
-.kcal { align-items: flex-end; padding-left: 1rem; font-size: 0.8125rem; font-weight: 600; color: var(--energy); white-space: nowrap; min-width: 5.5rem; }
-.week.up .kcal { color: var(--warn); font-weight: 500; }
+.kcal { align-items: flex-end; padding-left: 1rem; font-size: 0.8125rem; font-weight: 600; color: var(--muted); white-space: nowrap; min-width: 5.5rem; }
+.week.up .kcal, .week.up .wk b, .week.up .wk span { color: var(--warn); }
+.card-head .note.kcalhead { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
 .week.now .kcal { color: var(--muted); }
 .card-head .note.energy { color: var(--energy); font-weight: 600; }
 .week.up .bar { background: var(--warn); }
@@ -199,7 +200,7 @@ html { -webkit-text-size-adjust: 100%; }
   </section>
 
   <section class="panel card" id="wochen">
-    <div class="card-head"><h2>Abnahme pro Woche</h2><span class="note energy">Defizit bzw. <span style="color:var(--warn)">zu viel</span> pro Tag</span></div>
+    <div class="card-head"><h2>Abnahme pro Woche</h2><span class="note kcalhead">KCAL/TAG</span></div>
     <ul class="weeks tnum" id="weeks"></ul>
     <button class="more" id="more" type="button" hidden></button>
   </section>
@@ -329,7 +330,7 @@ function drawWeeks(rows) {
     track.append(bar); cell.append(track);
     const val = el('div', 'wval', (r.abn > 0 ? '−' : r.abn < 0 ? '+' : '±') + kg2(Math.abs(r.abn)) + ' kg');
     // Abnahme: Defizit pro Tag. Zunahme: so viel pro Tag mehr gegessen als verbraucht (mit +)
-    const kcal = el('div', 'kcal', r.abn < 0 ? '+' + nf(0).format(-r.kcal) + ' kcal' : nf(0).format(r.kcal) + ' kcal');
+    const kcal = el('div', 'kcal', (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal)) + ' kcal');
     li.append(wk, cell, val, kcal);
     return li;
   }));
