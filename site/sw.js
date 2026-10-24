@@ -1,5 +1,5 @@
 // Offline-Unterstützung: App-Dateien aus dem Cache, Messdaten immer frisch aus dem Netz.
-const CACHE = 'abnehmreise-v1';
+const CACHE = 'withings-dashboard-v2';
 const SHELL = ['./', 'index.html', 'd3.min.js', 'manifest.webmanifest', 'icons/icon-192.png',
   'fonts/figtree-latin-400-normal.woff2', 'fonts/figtree-latin-500-normal.woff2', 'fonts/figtree-latin-600-normal.woff2',
   'fonts/figtree-latin-700-normal.woff2', 'fonts/figtree-latin-800-normal.woff2'];

@@ -1,4 +1,4 @@
-# Abnehmreise
+# Withings Dashboard
 
 Private Web-App, die die Messungen einer Withings-Waage anzeigt.
 

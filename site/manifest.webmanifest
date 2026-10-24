@@ -1,6 +1,6 @@
 {
-  "name": "Abnehmreise",
-  "short_name": "Abnehmreise",
+  "name": "Withings Dashboard",
+  "short_name": "Withings Dashboard",
   "description": "Gewicht und Abnahme pro Woche",
   "lang": "de",
   "start_url": "./",
