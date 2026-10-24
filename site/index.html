@@ -67,7 +67,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .hero .hcol + .hcol { border-left: 1px solid var(--line); padding-left: clamp(0.9rem, 5vw, 2.5rem); margin-left: clamp(0.9rem, 5vw, 2.5rem); }
 .hero .lbl { grid-row: 1; font-size: 1rem; font-weight: 500; color: var(--muted); }
 .hero .big { grid-row: 2; align-self: last baseline; font-weight: 800; line-height: 1; letter-spacing: -0.035em; white-space: nowrap; font-size: clamp(2.3rem, 10.5vw, 6.5rem); color: var(--fg); }
-.hero .big.accent { color: var(--good-ink); }
+.hero .big.accent { color: var(--good-ink); font-size: clamp(2rem, 9vw, 6rem); }
+.hero .big.xl { font-size: clamp(2.8rem, 13vw, 8rem); }
 .hero .big small { font-size: 0.34em; font-weight: 700; letter-spacing: 0; margin-left: 0.35em; color: var(--fg); }
 .hero .big.accent small { color: var(--good-ink); }
 .hero .sub { grid-row: 3; font-size: 0.9375rem; color: var(--muted); white-space: nowrap; }
@@ -221,7 +222,7 @@ html { -webkit-text-size-adjust: 100%; }
   <section class="hero" aria-label="Gesamt">
     <div class="hcol">
       <span class="lbl">Aktuelles Gewicht</span>
-      <div class="big tnum" id="aktuell">–</div>
+      <div class="big xl tnum" id="aktuell">–</div>
       <span class="sub tnum" id="meta">&nbsp;</span>
     </div>
     <div class="hcol">
