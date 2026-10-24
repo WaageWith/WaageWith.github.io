@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1117" media="(prefers-color-scheme: dark)">
+<title>Abnehmreise</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+@font-face { font-family: "Figtree"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/figtree-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/figtree-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/figtree-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/figtree-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Figtree"; font-weight: 800; font-style: normal; font-display: swap; src: url("fonts/figtree-latin-800-normal.woff2") format("woff2"); }
+
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --fg: #151a24;
+  --muted: #4a5263;
+  --line: #d6dbe3;
+  --grid: #e7eaef;
+  --mark: #8c95a4;
+  --accent: #2457d6;
+  --accent-soft: #c9d7f7;
+  --warn: #a8520a;
+  --good: #12895a;
+  --good-ink: #0a5c3b;
+  --good-soft: #86c9a9;
+  --energy: #7048c9;
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.07);
+  --sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1117; --panel: #161a22; --fg: #e8ebf1; --muted: #a7aebb; --line: #333a46; --grid: #252b35; --mark: #6b7484;
+  --accent: #82a6ff; --accent-soft: #2a3a5e; --warn: #f0a25e; --good: #4fcf95; --good-ink: #6fe0ab; --good-soft: #2b6b4f; --energy: #b39cff; --shadow: none; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1117; --panel: #161a22; --fg: #e8ebf1; --muted: #a7aebb; --line: #333a46; --grid: #252b35; --mark: #6b7484;
+  --accent: #82a6ff; --accent-soft: #2a3a5e; --warn: #f0a25e; --good: #4fcf95; --good-ink: #6fe0ab; --good-soft: #2b6b4f; --energy: #b39cff; --shadow: none; color-scheme: dark; }
+
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); margin: 0; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 60rem; margin-inline: auto; padding-block: 2rem 3rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 1rem; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; flex-wrap: wrap; }
+.hero {
+  display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto auto; justify-content: start;
+  column-gap: 0; row-gap: 0.35rem; padding-block: 0.5rem 1.25rem; border-bottom: 1px solid var(--line); margin-bottom: 0.25rem;
+}
+.hero .hcol { display: grid; grid-row: span 3; grid-template-rows: subgrid; gap: 0; min-width: 0; }
+.hero .hcol + .hcol { border-left: 1px solid var(--line); padding-left: clamp(0.7rem, 3vw, 2rem); margin-left: clamp(0.6rem, 3vw, 2rem); }
+.hero .lbl { grid-row: 1; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.hero .sub { grid-row: 2; justify-self: start; align-self: start; font-size: 0.8125rem; font-weight: 600; color: var(--good-ink); background: color-mix(in srgb, var(--good) 13%, transparent); border-radius: 999px; padding: 0.15rem 0.6rem; margin-top: 0.2rem; white-space: nowrap; }
+.hero .big { grid-row: 3; align-self: last baseline; margin-top: 0.35rem; font-weight: 800; line-height: 0.95; letter-spacing: -0.04em; white-space: nowrap; }
+.hero .big.xl { font-size: clamp(3.2rem, 14.5vw, 8.5rem); color: var(--fg); }
+.hero .big.accent { font-size: clamp(2.6rem, 12vw, 6.5rem); color: var(--good-ink); }
+.hero .big small { font-size: 0.32em; font-weight: 600; letter-spacing: 0; margin-left: 0.4em; color: var(--muted); }
+.hero .big.accent small { color: var(--good-ink); opacity: 0.75; }
+.hero .sub.neutral { color: var(--muted); background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.titlerow { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
+h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem; letter-spacing: -0.01em; line-height: 1.1; }
+.pill { font-size: 0.75rem; font-weight: 600; color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 0.05rem 0.55rem; }
+.meta { margin: 0; font-size: 0.875rem; color: var(--muted); }
+.meta b { color: var(--fg); font-weight: 600; }
+
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
+.kpi { padding: 1.125rem 1.25rem 1.125rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "lbl ico" "val val" "sub sub"; row-gap: 0.35rem; align-items: center; }
+.kpi .lbl { grid-area: lbl; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.kpi .ico { grid-area: ico; width: 1.75rem; height: 1.75rem; border-radius: 50%; display: grid; place-items: center; font-size: 0.9rem; font-weight: 700; color: var(--muted); background: color-mix(in srgb, var(--fg) 6%, transparent); }
+.kpi.good .ico { color: var(--good-ink); background: color-mix(in srgb, var(--good) 13%, transparent); }
+.kpi.bad .ico { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.kpi .kval { grid-area: val; font-weight: 800; font-size: clamp(1.6rem, 6.5vw, 2.6rem); line-height: 1.05; letter-spacing: -0.03em; white-space: nowrap; margin-top: 0.15rem; }
+.kpi .kval small { font-size: 0.42em; font-weight: 600; color: var(--muted); margin-left: 0.4em; letter-spacing: 0; }
+.kpi.good .kval { color: var(--good-ink); }
+.kpi.good .kval small { color: var(--good-ink); opacity: 0.75; }
+.kpi.bad .kval { color: var(--warn); }
+.kpi .sub { grid-area: sub; font-size: 0.8125rem; color: var(--muted); }
+
+.card { padding: 1.25rem 1.25rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
+.card-head .note { font-size: 0.8125rem; color: var(--muted); }
+
+/* Wochen */
+.weeks { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: stretch; margin: 0; padding: 0; list-style: none; }
+.week { display: contents; }
+.week > * { padding-block: 0.7rem; border-top: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; }
+.week:first-child > * { border-top: 0; }
+.wk { padding-right: 1rem; line-height: 1.25; }
+.wk b { display: block; font-weight: 600; font-size: 0.9375rem; }
+.wk span { display: block; font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+.track { height: 18px; border-radius: 6px; background: var(--grid); }
+.trackcell .track { width: 100%; }
+.bar { height: 100%; border-radius: 6px; background: var(--good); min-width: 4px; }
+.wval { align-items: flex-end; padding-left: 1rem; font-weight: 800; font-size: 1.375rem; letter-spacing: -0.01em; white-space: nowrap; }
+.kcal { align-items: flex-end; padding-left: 1rem; font-size: 0.8125rem; font-weight: 600; color: var(--energy); white-space: nowrap; min-width: 5.5rem; }
+.week.up .kcal { color: var(--warn); font-weight: 500; }
+.week.now .kcal { color: var(--muted); }
+.card-head .note.energy { color: var(--energy); font-weight: 600; }
+.week.up .bar { background: var(--warn); }
+.week.up .wval { color: var(--warn); }
+.week.now .bar { background: var(--good-soft); }
+.week.now .wval, .week.now .wk b { color: var(--muted); }
+.more { align-self: flex-start; background: none; border: 0; padding: 0.25rem 0; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--accent); cursor: pointer; }
+.more:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+@media (max-width: 520px) {
+  .card { padding: 1rem 1rem 0.75rem; }
+  .wk { padding-right: 0.75rem; }
+  .wval { padding-left: 0.75rem; font-size: 1.1875rem; }
+  .kcal { padding-left: 0.6rem; min-width: 0; font-size: 0.75rem; }
+  .kpi { padding: 0.8rem 0.75rem; }
+  .kpis { gap: 0.5rem; }
+}
+
+/* Kurve */
+.chart { position: relative; }
+.chart svg { display: block; }
+.tick { fill: var(--muted); font-size: 12px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.endlabel { fill: var(--fg); font-size: 13px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); }
+.legend i { display: inline-block; vertical-align: middle; margin-right: 0.35rem; }
+.legend .l-line { width: 14px; height: 2px; background: var(--accent); border-radius: 1px; }
+.legend .l-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mark); }
+.legend .l-sq { width: 9px; height: 9px; border-radius: 2px; background: var(--good); }
+.legend .l-sq.up { background: var(--warn); }
+.legend .l-sq.now { background: var(--good-soft); }
+.barlabel { fill: var(--fg); font-size: 11px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.legend .l-dash { width: 14px; height: 0; border-top: 2px dashed var(--accent); }
+.tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(16, 24, 40, 0.14); padding: 0.375rem 0.625rem; font-size: 0.8125rem; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
+.tip .d { color: var(--muted); font-size: 0.75rem; }
+
+details { font-size: 0.875rem; color: var(--muted); padding-inline: 0.25rem; }
+summary { cursor: pointer; font-weight: 600; color: var(--fg); padding-block: 0.25rem; }
+details ul { margin: 0.5rem 0 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; line-height: 1.5; max-width: 62ch; }
+details b { color: var(--fg); font-weight: 600; }
+
+html { -webkit-text-size-adjust: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+.wrap { padding-block: 1.25rem 2.5rem; }
+.center { min-height: 70vh; display: grid; place-items: center; text-align: center; padding-inline: max(16px, env(safe-area-inset-left, 0px)); }
+.sign { margin-right: -0.07em; }
+.lockbox { width: min(22rem, 100%); display: flex; flex-direction: column; gap: 0.875rem; padding: 1.75rem 1.5rem; text-align: left; }
+.lockbox img { width: 56px; height: 56px; border-radius: 14px; }
+.lockbox h1 { font-family: var(--sans); font-size: 1.375rem; font-weight: 800; margin: 0; }
+.lockbox p { margin: 0; color: var(--muted); font-size: 0.9375rem; line-height: 1.45; }
+.lockbox label { font-size: 0.8125rem; font-weight: 600; color: var(--muted); }
+.lockbox input { font: inherit; font-size: 1.0625rem; padding: 0.75rem 0.875rem; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); width: 100%; box-sizing: border-box; }
+.lockbox input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.lockbox button { font: inherit; font-size: 1rem; font-weight: 700; padding: 0.8rem; border: 0; border-radius: 10px; background: var(--accent); color: #fff; cursor: pointer; }
+.lockbox button:disabled { opacity: 0.6; }
+.err { color: var(--warn) !important; font-weight: 600; font-size: 0.875rem !important; }
+#loading { color: var(--muted); font-size: 0.9375rem; }
+</style>
+</head>
+<body>
+<div class="center" id="loading">Lädt …</div>
+
+<div class="center" id="lock" hidden>
+  <form class="panel lockbox" id="lock-form" autocomplete="on">
+    <img src="icons/icon-192.png" alt="">
+    <h1>Abnehmreise</h1>
+    <p>Bitte einmal das Passwort eingeben. Danach öffnet sich die App direkt.</p>
+    <label for="pw">Passwort</label>
+    <input id="pw" name="password" type="password" autocomplete="current-password" required>
+    <p class="err" id="pw-err" hidden></p>
+    <button id="pw-btn" type="submit">Öffnen</button>
+  </form>
+</div>
+
+<div class="center" id="empty" hidden>
+  <div class="panel lockbox"><h1>Noch keine Messungen</h1><p>Sobald die Waage die erste Messung überträgt, erscheint sie hier.</p></div>
+</div>
+
+<div id="app" hidden>
+<div class="wrap">
+
+  <section class="hero" aria-label="Gesamt">
+    <div class="hcol">
+      <span class="lbl">Aktuelles Gewicht</span>
+      <span class="sub neutral tnum" id="meta">&nbsp;</span>
+      <div class="big xl tnum" id="aktuell">–</div>
+    </div>
+    <div class="hcol">
+      <span class="lbl" id="seit">Abgenommen</span>
+      <span class="sub tnum" id="start">&nbsp;</span>
+      <div class="big accent tnum" id="gesamt">–</div>
+    </div>
+  </section>
+
+  <section class="kpis" aria-label="Kennzahlen">
+    <div class="panel kpi" id="t-woche"><span class="lbl">Pro Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-woche">–</span><span class="sub">Ø 4 Wochen</span></div>
+    <div class="panel kpi" id="t-vw"><span class="lbl">Zur Vorwoche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-vw">–</span><span class="sub">im Schnitt</span></div>
+  </section>
+
+  <section class="panel card" id="wochen">
+    <div class="card-head"><h2>Abnahme pro Woche</h2><span class="note energy">Defizit pro Tag</span></div>
+    <ul class="weeks tnum" id="weeks"></ul>
+    <button class="more" id="more" type="button" hidden></button>
+  </section>
+
+  <section class="panel card" id="verlauf">
+    <div class="card-head"><h2>Gewicht</h2>
+      <div class="legend"><span><i class="l-line"></i>7-Tage-Schnitt</span><span><i class="l-dot"></i>Messung</span></div>
+    </div>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="panel card" id="saeulen">
+    <div class="card-head"><h2>Wochenabnahme im Verlauf</h2>
+      <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>laufende Woche</span><span><i class="l-dash"></i>Trend</span></div>
+    </div>
+    <div class="chart" id="chart-wochen"></div>
+  </section>
+
+</div>
+
+</div>
+
+<script src="d3.min.js"></script>
+<script>
+const DAY = 864e5;
+const nf = (min, max = min) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
+const minus = (s) => s.replace('-', '−');
+const kg1 = (v) => minus(nf(1).format(v));
+const kg2 = (v) => minus(nf(2).format(v));
+const fLong = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+const fMon = new Intl.DateTimeFormat('de-DE', { month: 'short', timeZone: 'UTC' });
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+/* ---------- Daten ---------- */
+let pts = [];
+let cfg = {};
+const mean = (a) => a.reduce((s, p) => s + p.w, 0) / a.length;
+
+function summary() {
+  const last = pts[pts.length - 1].t;
+  const win = (from, to) => pts.filter((p) => p.t > last - from * DAY && p.t <= last - to * DAY);
+  const jetzt = mean(win(7, 0));
+  const vw = win(14, 7);
+  const reg = win(28, 0);
+  const mx = reg.reduce((s, p) => s + p.t, 0) / reg.length, my = mean(reg);
+  const den = reg.reduce((s, p) => s + (p.t - mx) ** 2, 0);
+  const proWoche = den ? -(reg.reduce((s, p) => s + (p.t - mx) * (p.w - my), 0) / den) * DAY * 7 : 0;
+  const ziel = Number(cfg.ziel_kg);
+  const hatZiel = Number.isFinite(ziel) && ziel > 0;
+  const wochen = hatZiel && proWoche > 0 && jetzt > ziel ? (jetzt - ziel) / proWoche : null;
+  return {
+    jetzt, start: pts[0], last, lastW: pts[pts.length - 1].w,
+    vorwoche: vw.length ? jetzt - mean(vw) : null,
+    proWoche,
+    defizit: Math.round((proWoche * 7700) / 7 / 10) * 10,
+    ziel: hatZiel ? ziel : null,
+    zielDatum: wochen != null ? new Date(last + wochen * 7 * DAY) : null,
+  };
+}
+
+function weeks() {
+  const monday = (t) => t - ((new Date(t).getUTCDay() + 6) % 7) * DAY;
+  const groups = new Map();
+  for (const p of pts) { const m = monday(p.t); if (!groups.has(m)) groups.set(m, []); groups.get(m).push(p); }
+  const last = pts[pts.length - 1].t;
+  const out = []; let prev = null;
+  for (const m of [...groups.keys()].sort((a, b) => a - b)) {
+    const avg = mean(groups.get(m));
+    const thu = new Date(m + 3 * DAY), y = thu.getUTCFullYear();
+    const kw = Math.floor((thu - Date.UTC(y, 0, 1)) / DAY / 7) + 1;
+    if (prev != null) {
+      const abn = prev - avg;
+      out.push({ kw, von: new Date(m), bis: new Date(m + 6 * DAY), abn, kcal: Math.round((abn * 7700) / 7 / 10) * 10, laufend: m + 6 * DAY > last });
+    }
+    prev = avg;
+  }
+  return out;
+}
+
+/* ---------- Kopf & Kennzahlen ---------- */
+function drawTop(s) {
+  $('meta').textContent = 'Stand ' + fLong.format(new Date(s.last));
+  const diff = s.start.w - s.lastW;
+  const withUnit = (id, txt, unit) => {
+    const sign = /^[−+]/.test(txt) ? txt[0] : '';
+    $(id).replaceChildren(...(sign ? [el('span', 'sign', sign)] : []), document.createTextNode(txt.slice(sign.length)), el('small', null, unit));
+  };
+  $('seit').textContent = diff >= 0 ? 'Abgenommen' : 'Zugenommen';
+  withUnit('gesamt', (diff >= 0 ? '−' : '+') + kg1(Math.abs(diff)), 'kg');
+  $('start').textContent = 'seit ' + fLong.format(new Date(s.start.t)) + ' (' + kg1(s.start.w) + ' kg)';
+  withUnit('aktuell', kg1(s.lastW), 'kg');
+  // Veränderung als Vorzeichen: minus = abgenommen
+  const tile = (id, valId, change) => {
+    const t = $(id);
+    t.classList.remove('good', 'bad');
+    if (change == null) return;
+    withUnit(valId, (change > 0 ? '+' : change < 0 ? '−' : '') + kg2(Math.abs(change)), 'kg');
+    t.classList.add(change <= 0 ? 'good' : 'bad');
+    t.querySelector('.ico').textContent = change <= 0 ? '↓' : '↑';
+  };
+  tile('t-woche', 'k-woche', -s.proWoche);
+  tile('t-vw', 'k-vw', s.vorwoche);
+}
+
+/* ---------- Wochen ---------- */
+let showAll = false;
+function drawWeeks(rows) {
+  const SHOW = 8;
+  const list = [...rows].reverse();
+  const visible = showAll ? list : list.slice(0, SHOW);
+  const max = d3.max(rows, (r) => Math.abs(r.abn)) || 1;
+  const dm = (d) => `${d.getUTCDate()}.${d.getUTCMonth() + 1}.`;
+  $('weeks').replaceChildren(...visible.map((r) => {
+    const li = el('li', 'week' + (r.abn < 0 ? ' up' : '') + (r.laufend ? ' now' : ''));
+    const wk = el('div', 'wk');
+    wk.append(el('b', null, 'KW ' + r.kw), el('span', null, r.laufend ? 'läuft noch' : `${dm(r.von)}–${dm(r.bis)}`));
+    const cell = el('div', 'trackcell');
+    const track = el('div', 'track');
+    const bar = el('div', 'bar');
+    bar.style.width = (Math.abs(r.abn) / max) * 100 + '%';
+    track.append(bar); cell.append(track);
+    const val = el('div', 'wval', (r.abn < 0 ? '+' : '') + kg2(Math.abs(r.abn)) + ' kg');
+    const kcal = el('div', 'kcal', r.abn < 0 ? 'zugenommen' : nf(0).format(r.kcal) + ' kcal');
+    li.append(wk, cell, val, kcal);
+    return li;
+  }));
+  const more = $('more');
+  more.hidden = list.length <= SHOW;
+  more.textContent = showAll ? 'Weniger anzeigen' : `Alle ${list.length} Wochen anzeigen`;
+}
+$('more').addEventListener('click', () => { showAll = !showAll; drawWeeks(weeks()); });
+
+/* ---------- Gewichtskurve ---------- */
+function drawChart(ziel) {
+  const rows = pts.map((p) => ({ d: new Date(p.t), w: p.w, tr: mean(pts.filter((q) => q.t > p.t - 7 * DAY && q.t <= p.t)) }));
+  const box = $('chart');
+  box.replaceChildren();
+  const W = Math.max(280, box.clientWidth);
+  const H = W < 520 ? 230 : 280;
+  box.style.minHeight = H + 'px';
+  const vals = rows.map((r) => r.w); if (ziel != null) vals.push(ziel);
+  const y = d3.scaleLinear([d3.min(vals) - 0.5, d3.max(vals) + 0.5], [H - 26, 10]).nice();
+  const yt = y.ticks(W < 520 ? 4 : 5);
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Gewichtsverlauf');
+  const measure = (texts, cls) => { const g = svg.append('g').attr('class', cls); const w = d3.max(texts, (t) => g.append('text').text(t).node().getComputedTextLength()) || 0; g.remove(); return w; };
+  const last = rows[rows.length - 1];
+  const endLabel = kg1(last.w) + ' kg';
+  const m = { l: measure(yt.map((v) => nf(0).format(v)), 'tick') + 10, r: measure([endLabel], 'endlabel') + 14, t: 10, b: 26 };
+  const x = d3.scaleUtc(d3.extent(rows, (r) => r.d), [m.l, W - m.r]);
+  y.range([H - m.b, m.t]);
+
+  svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => y(v)).attr('y2', (v) => y(v)).style('stroke', 'var(--grid)');
+  svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'tick').attr('x', m.l - 8).attr('y', (v) => y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => nf(0).format(v));
+  svg.append('g').selectAll('text').data(x.ticks(d3.utcMonth.every(1))).join('text').attr('class', 'tick').attr('x', (d) => x(d)).attr('y', H - 6).attr('text-anchor', 'middle').text((d) => fMon.format(d));
+  if (ziel != null) {
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(ziel)).attr('y2', y(ziel)).style('stroke', 'var(--muted)').attr('stroke-dasharray', '4 4').style('opacity', 0.6);
+  }
+  svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', (r) => x(r.d)).attr('cy', (r) => y(r.w)).attr('r', 2.25).style('fill', 'var(--mark)');
+  svg.append('path').datum(rows).attr('d', d3.line((r) => x(r.d), (r) => y(r.tr))).style('fill', 'none').style('stroke', 'var(--accent)').attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+  svg.append('circle').attr('cx', x(last.d)).attr('cy', y(last.w)).attr('r', 4).style('fill', 'var(--fg)');
+  svg.append('text').attr('class', 'endlabel').attr('x', x(last.d) + 8).attr('y', y(last.w)).attr('dy', '0.32em').text(endLabel);
+
+  const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
+  const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
+  const hl = hover.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--line)');
+  const hd = hover.append('circle').attr('r', 4.5).style('fill', 'var(--accent)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
+  svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
+    .style('fill', 'transparent').style('touch-action', 'pan-y')
+    .on('pointermove pointerdown', (ev) => {
+      const [px] = d3.pointer(ev, svg.node());
+      const t0 = x.invert(px);
+      const r = d3.least(rows, (q) => Math.abs(q.d - t0));
+      const cx = x(r.d);
+      hover.style('display', null); hl.attr('x1', cx).attr('x2', cx); hd.attr('cx', cx).attr('cy', y(r.tr));
+      const line = el('div');
+      line.append(el('b', null, kg1(r.tr) + ' kg'), document.createTextNode(' · gewogen ' + kg1(r.w)));
+      tip.replaceChildren(el('div', 'd', fLong.format(r.d)), line);
+      tip.hidden = false;
+      const scale = box.clientWidth / W;
+      let left = cx * scale + 12;
+      if (left + tip.offsetWidth > box.clientWidth) left = Math.max(0, cx * scale - tip.offsetWidth - 12);
+      tip.style.left = left + 'px';
+      tip.style.top = Math.max(0, y(r.tr) * scale - 52) + 'px';
+    })
+    .on('pointerleave', () => { hover.style('display', 'none'); tip.hidden = true; });
+}
+
+/* ---------- Wochenabnahme als Säulen ---------- */
+function drawWeekBars(all) {
+  const box = $('chart-wochen');
+  box.replaceChildren();
+  const rows = all;
+  if (!rows.length) return;
+  const W = Math.max(280, box.clientWidth);
+  const H = W < 520 ? 220 : 260;
+  box.style.minHeight = H + 'px';
+  const y = d3.scaleLinear([Math.min(0, d3.min(rows, (r) => r.abn)), Math.max(0.1, d3.max(rows, (r) => r.abn))], [H - 26, 18]).nice();
+  const yt = y.ticks(4);
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche als Säulen');
+  const measure = (texts, cls) => { const g = svg.append('g').attr('class', cls); const w = d3.max(texts, (t) => g.append('text').text(t).node().getComputedTextLength()) || 0; g.remove(); return w; };
+  const m = { l: measure(yt.map((v) => minus(nf(1).format(v))), 'tick') + 10, r: 22, t: 18, b: 26 };
+  y.range([H - m.b, m.t]);
+  const x = d3.scaleBand(rows.map((r) => r.kw), [m.l, W - m.r]).paddingInner(0.28).paddingOuter(0.12);
+  const bw = Math.min(30, x.bandwidth());
+  const off = (x.bandwidth() - bw) / 2;
+
+  svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => y(v)).attr('y2', (v) => y(v)).style('stroke', 'var(--grid)');
+  svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'tick').attr('x', m.l - 8).attr('y', (v) => y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => minus(nf(1).format(v)));
+
+  const color = (r) => (r.abn < 0 ? 'var(--warn)' : r.laufend ? 'var(--good-soft)' : 'var(--good)');
+  const bars = svg.append('g').selectAll('path').data(rows).join('path')
+    .attr('d', (r) => {
+      const x0 = x(r.kw) + off, h = Math.max(2, Math.abs(y(r.abn) - y(0))), rad = Math.min(4, bw / 2, h);
+      if (r.abn >= 0) { const top = y(0) - h; return `M${x0},${y(0)}V${top + rad}Q${x0},${top} ${x0 + rad},${top}H${x0 + bw - rad}Q${x0 + bw},${top} ${x0 + bw},${top + rad}V${y(0)}Z`; }
+      const bot = y(0) + h; return `M${x0},${y(0)}V${bot - rad}Q${x0},${bot} ${x0 + rad},${bot}H${x0 + bw - rad}Q${x0 + bw},${bot} ${x0 + bw},${bot - rad}V${y(0)}Z`;
+    })
+    .style('fill', color);
+  svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--mark)');
+
+  // Trendlinie: lineare Regression über die abgeschlossenen Wochen
+  const fit = rows.map((r, i) => ({ i, v: r.abn, r })).filter((p) => !p.r.laufend);
+  if (fit.length >= 3) {
+    const mi = d3.mean(fit, (p) => p.i), mv = d3.mean(fit, (p) => p.v);
+    const slope = d3.sum(fit, (p) => (p.i - mi) * (p.v - mv)) / d3.sum(fit, (p) => (p.i - mi) ** 2);
+    const at = (i) => mv + slope * (i - mi);
+    const cx = (i) => x(rows[i].kw) + x.bandwidth() / 2;
+    const i0 = fit[0].i, i1 = fit[fit.length - 1].i;
+    svg.append('line').attr('x1', cx(i0)).attr('x2', cx(i1)).attr('y1', y(at(i0))).attr('y2', y(at(i1)))
+      .style('stroke', 'var(--accent)').attr('stroke-width', 2).attr('stroke-dasharray', '6 4').attr('stroke-linecap', 'round').style('opacity', 0.85).style('pointer-events', 'none');
+  }
+
+  if (x.bandwidth() >= 36) {
+    svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'barlabel')
+      .attr('x', (r) => x(r.kw) + x.bandwidth() / 2).attr('y', (r) => (r.abn >= 0 ? y(r.abn) - 5 : y(r.abn) + 13)).attr('text-anchor', 'middle')
+      .style('fill', (r) => (r.abn < 0 ? 'var(--warn)' : 'var(--fg)'))
+      .text((r) => minus(nf(2).format(r.abn)));
+  }
+  const every = Math.max(1, Math.ceil((rows.length * 44) / Math.max(1, W - m.l - m.r)));
+  svg.append('g').selectAll('text').data(rows.filter((r, i) => (rows.length - 1 - i) % every === 0)).join('text')
+    .attr('class', 'tick').attr('x', (r) => x(r.kw) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').text((r) => 'KW ' + r.kw);
+
+  const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
+  const reset = () => { tip.hidden = true; bars.style('opacity', 1); };
+  svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', (r) => x(r.kw) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.t - m.b)
+    .style('fill', 'transparent').style('touch-action', 'pan-y')
+    .on('pointerenter pointerdown', (ev, r) => {
+      bars.style('opacity', (b) => (b === r ? 1 : 0.45));
+      const line = el('div');
+      line.append(el('b', null, (r.abn < 0 ? '+' + kg2(-r.abn) + ' kg zugenommen' : kg2(r.abn) + ' kg abgenommen')));
+      const extra = el('div', 'd', r.laufend ? 'Woche läuft noch' : (r.abn > 0 ? '≈ ' + nf(0).format(r.kcal) + ' kcal Defizit/Tag' : ''));
+      tip.replaceChildren(el('div', 'd', 'KW ' + r.kw), line, extra);
+      tip.hidden = false;
+      const scale = box.clientWidth / W, cx = (x(r.kw) + x.bandwidth() / 2) * scale;
+      let left = cx + 12;
+      if (left + tip.offsetWidth > box.clientWidth) left = Math.max(0, cx - tip.offsetWidth - 12);
+      tip.style.left = left + 'px';
+      tip.style.top = Math.max(0, Math.min(y(r.abn), y(0)) * scale - 40) + 'px';
+    })
+    .on('pointerleave', reset);
+}
+
+function render() {
+  if (!pts.length) return;
+  const s = summary();
+  drawTop(s);
+  drawWeeks(weeks());
+  drawChart(s.ziel);
+  drawWeekBars(weeks());
+}
+window.addEventListener('resize', () => {
+  if (!pts.length || window.innerWidth === lastW) return;
+  lastW = window.innerWidth; clearTimeout(timer); timer = setTimeout(render, 120);
+});
+let lastW = window.innerWidth, timer;
+
+/* ---------- Laden & Entschlüsseln ---------- */
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+async function decrypt(file, password) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: b64(file.salt), iterations: file.iter },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(file.iv) }, key, b64(file.ct));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+const store = {
+  get() { try { return localStorage.getItem('waage-pw'); } catch (e) { return null; } },
+  set(v) { try { localStorage.setItem('waage-pw', v); } catch (e) {} },
+  clear() { try { localStorage.removeItem('waage-pw'); } catch (e) {} },
+};
+let lastLoad = 0;
+function show(view) {
+  for (const id of ['lock', 'empty', 'app']) $(id).hidden = id !== view;
+  $('loading').hidden = true;
+}
+async function load(password) {
+  const res = await fetch('data.enc.json?t=' + Date.now(), { cache: 'no-store' });
+  if (res.status === 404) { lastLoad = Date.now(); show('empty'); return; }
+  if (!res.ok) throw new Error('offline');
+  const file = await res.json();
+  const data = await decrypt(file, password);
+  lastLoad = Date.now();
+  cfg = data.einstellungen || {};
+  const startAb = cfg.start_datum ? Date.parse(cfg.start_datum + 'T00:00:00Z') : -Infinity;
+  pts = (data.messungen || [])
+    .map((r) => ({ t: Date.parse(String(r.datum).slice(0, 10) + 'T00:00:00Z'), w: Number(r.gewicht_kg) }))
+    .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.w) && p.t >= startAb)
+    .sort((a, b) => a.t - b.t);
+  if (!pts.length) { show('empty'); return; }
+  show('app');
+  render();
+}
+async function boot() {
+  const pw = store.get();
+  if (!pw) { show('lock'); return; }
+  try { await load(pw); }
+  catch (e) {
+    if (e && e.message === 'offline') { if (!pts.length) { $('loading').textContent = 'Keine Verbindung. Bitte später erneut öffnen.'; } return; }
+    store.clear(); show('lock');
+  }
+}
+$('lock-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const pw = $('pw').value;
+  $('pw-err').hidden = true;
+  $('pw-btn').disabled = true;
+  try { await load(pw); store.set(pw); }
+  catch (e) { $('pw-err').textContent = e && e.message === 'offline' ? 'Keine Verbindung zum Internet.' : 'Das Passwort stimmt nicht.'; $('pw-err').hidden = false; }
+  finally { $('pw-btn').disabled = false; }
+});
+// Beim Zurückkehren in die App neue Messungen holen
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Date.now() - lastLoad > 60000) boot();
+});
+document.fonts?.ready.then(() => { if (pts.length) render(); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+boot();
+</script>
+</body>
+</html>

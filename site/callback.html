@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Withings verbunden</title>
+<style>
+:root { --bg: #f4f5f7; --panel: #fff; --fg: #151a24; --muted: #4a5263; --line: #d6dbe3; --accent: #2457d6; --warn: #a8520a; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0e1117; --panel: #161a22; --fg: #e8ebf1; --muted: #a7aebb; --line: #333a46; --accent: #82a6ff; --warn: #f0a25e; color-scheme: dark; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 34rem; margin: 3rem auto; padding: 0 16px; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.9rem; }
+h1 { margin: 0; font-size: 1.375rem; }
+p { margin: 0; color: var(--muted); line-height: 1.5; }
+textarea { font: 0.875rem ui-monospace, monospace; width: 100%; box-sizing: border-box; min-height: 6rem; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+button { font: inherit; font-weight: 700; padding: 0.8rem; border: 0; border-radius: 10px; background: var(--accent); color: #fff; cursor: pointer; }
+#timer { font-weight: 700; color: var(--fg); }
+.warn { color: var(--warn); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <div class="box">
+    <h1 id="h">Freigabe erteilt</h1>
+    <p id="txt">Jetzt schnell: Adresse kopieren und an Claude schicken. Der Code gilt nur kurz (<span id="timer">30</span> Sekunden).</p>
+    <textarea id="url" readonly></textarea>
+    <button id="copy" type="button">Adresse kopieren</button>
+  </div>
+</main>
+<script>
+const params = new URLSearchParams(location.search);
+const url = document.getElementById('url');
+url.value = location.href;
+if (!params.get('code')) {
+  document.getElementById('h').textContent = 'Keine Freigabe gefunden';
+  document.getElementById('txt').textContent = params.get('error') ? 'Withings meldet: ' + params.get('error') : 'Diese Seite wird nach der Withings-Freigabe automatisch aufgerufen.';
+}
+document.getElementById('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(location.href); document.getElementById('copy').textContent = 'Kopiert ✓'; }
+  catch (e) { url.select(); }
+});
+let left = 30;
+const t = setInterval(() => {
+  left -= 1;
+  document.getElementById('timer').textContent = Math.max(0, left);
+  if (left <= 0) { clearInterval(t); document.getElementById('txt').innerHTML = '<span class="warn">Zeit abgelaufen.</span> Einfach die Freigabe noch einmal starten.'; }
+}, 1000);
+</script>
+</body>
+</html>

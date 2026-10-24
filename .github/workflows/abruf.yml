@@ -1,0 +1,64 @@
+name: Withings-Abruf
+
+on:
+  schedule:
+    # Morgens alle 5 Minuten (kürzester Abstand bei GitHub).
+    # Zeiten in UTC: 4–9 Uhr UTC deckt 6–10 Uhr deutsche Zeit im Sommer und im Winter ab.
+    - cron: "*/5 4-9 * * *"
+    # Restlicher Tag stündlich, falls sie sich einmal später wiegt.
+    - cron: "23 0-3,10-23 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: withings-abruf
+  cancel-in-progress: false
+
+jobs:
+  abruf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    outputs:
+      changed: ${{ steps.fetch.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten
+        run: pip install --quiet --disable-pip-version-check cryptography==44.0.0
+
+      - name: Messungen abrufen
+        id: fetch
+        env:
+          WITHINGS_CLIENT_ID: ${{ secrets.WITHINGS_CLIENT_ID }}
+          WITHINGS_CLIENT_SECRET: ${{ secrets.WITHINGS_CLIENT_SECRET }}
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+        run: python scripts/withings.py fetch
+
+      # Läuft auch bei Fehlern, damit ein erneuerter Withings-Zugang nie verloren geht.
+      - name: Speichern
+        if: always()
+        run: |
+          git config user.name "waage-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A state site/data.enc.json
+          if git diff --cached --quiet; then echo "Nichts Neues."; exit 0; fi
+          git commit -q -m "Messwerte aktualisiert"
+          for i in 1 2 3 4 5; do
+            git push -q && exit 0
+            sleep $((i * 4)); git pull -q --rebase
+          done
+          exit 1
+
+  veroeffentlichen:
+    needs: abruf
+    if: needs.abruf.outputs.changed == 'true'
+    uses: ./.github/workflows/seite.yml
