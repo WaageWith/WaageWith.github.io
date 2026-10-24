@@ -375,11 +375,11 @@ function drawWeeks(rows) {
   const SHOW = 8;
   const list = [...rows].reverse();
   const visible = showAll ? list : list.slice(0, SHOW);
-  // Gemeinsame Skala: Abnahme nach links (grün), Zunahme nach rechts (rot), Nulllinie dazwischen
+  // Gemeinsame Skala: Abnahme nach rechts (grün), Zunahme nach links (rot), Nulllinie dazwischen
   const maxLoss = Math.max(0, d3.max(rows, (r) => r.abn) || 0);
   const maxGain = Math.max(0, d3.max(rows, (r) => -r.abn) || 0);
   const span = maxLoss + maxGain || 1;
-  const zero = (maxLoss / span) * 100;
+  const zero = (maxGain / span) * 100;
   const dm = (d) => `${d.getUTCDate()}.${d.getUTCMonth() + 1}.`;
   $('weeks').replaceChildren(...visible.map((r) => {
     const li = el('li', 'week' + (r.abn < 0 ? ' up' : '') + (r.laufend ? ' now' : ''));
@@ -390,8 +390,8 @@ function drawWeeks(rows) {
     const bar = el('div', 'bar');
     const w = (Math.abs(r.abn) / span) * 100;
     bar.style.width = w + '%';
-    bar.style.left = (r.abn >= 0 ? zero - w : zero) + '%';
-    bar.classList.add(maxGain === 0 ? 'flush' : r.abn >= 0 ? 'neg' : 'pos');
+    bar.style.left = (r.abn >= 0 ? zero : zero - w) + '%';
+    bar.classList.add(maxGain === 0 ? 'flush' : r.abn >= 0 ? 'pos' : 'neg');
     track.append(bar);
     if (maxGain > 0) { const z = el('div', 'zero'); z.style.left = zero + '%'; track.append(z); }
     cell.append(track);
