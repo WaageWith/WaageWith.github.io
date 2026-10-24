@@ -129,7 +129,11 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .legend .l-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mark); }
 .legend .l-sq { width: 9px; height: 9px; border-radius: 2px; background: var(--good); }
 .legend .l-sq.up { background: var(--warn); }
-.legend .l-sq.now { background: var(--good-soft); }
+.legend .l-sq.now { background: color-mix(in srgb, var(--good) 12%, transparent); border: 1.5px dashed var(--good); box-sizing: border-box; width: 11px; height: 11px; }
+.card-head.barhead { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+.bl { font-size: 12px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.kcalcap { fill: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; font-family: var(--sans); }
+.kcalv { font-size: 13px; font-weight: 600; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .barlabel { fill: var(--fg); font-size: 11px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .legend .l-dash { width: 14px; height: 0; border-top: 2px dashed var(--accent); }
 .tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(16, 24, 40, 0.14); padding: 0.375rem 0.625rem; font-size: 0.8125rem; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
@@ -213,8 +217,8 @@ html { -webkit-text-size-adjust: 100%; }
   </section>
 
   <section class="panel card" id="saeulen">
-    <div class="card-head"><h2>Wochenabnahme im Verlauf</h2>
-      <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>laufende Woche</span><span><i class="l-dash"></i>Trend</span></div>
+    <div class="card-head barhead"><h2>Abnahme pro Woche</h2>
+      <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>läuft noch</span></div>
     </div>
     <div class="chart" id="chart-wochen"></div>
   </section>
@@ -407,78 +411,55 @@ function drawChart(ziel) {
 function drawWeekBars(all) {
   const box = $('chart-wochen');
   box.replaceChildren();
-  const rows = all;
-  if (!rows.length) return;
+  if (!all.length) return;
   const W = Math.max(280, box.clientWidth);
-  const H = W < 520 ? 220 : 260;
+  // So viele Wochen wie bequem nebeneinander passen (neueste rechts)
+  const rows = all.slice(-Math.max(4, Math.min(all.length, Math.floor(W / 54))));
+  const v = (r) => -r.abn; // Veränderung in kg: Abnahme nach unten, Zunahme nach oben
+  const vmin = Math.min(0, d3.min(rows, v)), vmax = Math.max(0, d3.max(rows, v));
+  const plotH = W < 520 ? 150 : 190;
+  const top = vmax > 0 ? 24 : 8;                 // Platz für „+0,20“ über einer Zunahme
+  const y = d3.scaleLinear([vmin, vmax === vmin ? vmin + 1 : vmax], [top + plotH, top]);
+  const yLab = top + plotH + 38;                 // KW-Beschriftung (unter den Werten der tiefsten Säule)
+  const ySep = yLab + 16, yCap = ySep + 26, yKcal = yCap + 24, H = yKcal + 8;
   box.style.minHeight = H + 'px';
-  const y = d3.scaleLinear([Math.min(0, d3.min(rows, (r) => r.abn)), Math.max(0.1, d3.max(rows, (r) => r.abn))], [H - 26, 18]).nice();
-  const yt = y.ticks(4);
-  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche als Säulen');
-  const measure = (texts, cls) => { const g = svg.append('g').attr('class', cls); const w = d3.max(texts, (t) => g.append('text').text(t).node().getComputedTextLength()) || 0; g.remove(); return w; };
-  const m = { l: measure(yt.map((v) => minus(nf(1).format(v))), 'tick') + 10, r: 22, t: 18, b: 26 };
-  y.range([H - m.b, m.t]);
-  const x = d3.scaleBand(rows.map((r) => r.kw), [m.l, W - m.r]).paddingInner(0.28).paddingOuter(0.12);
-  const bw = Math.min(30, x.bandwidth());
-  const off = (x.bandwidth() - bw) / 2;
+  const x = d3.scaleBand(rows.map((r) => r.kw), [0, W]).paddingInner(0.3).paddingOuter(0.08);
+  const bw = Math.min(48, x.bandwidth());
+  const cx = (r) => x(r.kw) + x.bandwidth() / 2;
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche');
 
-  svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => y(v)).attr('y2', (v) => y(v)).style('stroke', 'var(--grid)');
-  svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'tick').attr('x', m.l - 8).attr('y', (v) => y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => minus(nf(1).format(v)));
+  svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--line)').attr('stroke-width', 1.5);
 
-  const color = (r) => (r.abn < 0 ? 'var(--warn)' : r.laufend ? 'var(--good-soft)' : 'var(--good)');
-  const bars = svg.append('g').selectAll('path').data(rows).join('path')
-    .attr('d', (r) => {
-      const x0 = x(r.kw) + off, h = Math.max(2, Math.abs(y(r.abn) - y(0))), rad = Math.min(4, bw / 2, h);
-      if (r.abn >= 0) { const top = y(0) - h; return `M${x0},${y(0)}V${top + rad}Q${x0},${top} ${x0 + rad},${top}H${x0 + bw - rad}Q${x0 + bw},${top} ${x0 + bw},${top + rad}V${y(0)}Z`; }
-      const bot = y(0) + h; return `M${x0},${y(0)}V${bot - rad}Q${x0},${bot} ${x0 + rad},${bot}H${x0 + bw - rad}Q${x0 + bw},${bot} ${x0 + bw},${bot - rad}V${y(0)}Z`;
-    })
-    .style('fill', color);
-  svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--mark)');
+  // Säulen: abgerundet am freien Ende
+  const barPath = (r) => {
+    const x0 = cx(r) - bw / 2, y0 = y(0), y1 = y(v(r));
+    const hgt = Math.max(3, Math.abs(y1 - y0)), rad = Math.min(6, bw / 2, hgt);
+    if (v(r) > 0) { const t = y0 - hgt; return `M${x0},${y0}V${t + rad}Q${x0},${t} ${x0 + rad},${t}H${x0 + bw - rad}Q${x0 + bw},${t} ${x0 + bw},${t + rad}V${y0}Z`; }
+    const b = y0 + hgt; return `M${x0},${y0}V${b - rad}Q${x0},${b} ${x0 + rad},${b}H${x0 + bw - rad}Q${x0 + bw},${b} ${x0 + bw},${b - rad}V${y0}Z`;
+  };
+  svg.append('g').selectAll('path').data(rows).join('path').attr('d', barPath)
+    .style('fill', (r) => (r.laufend ? 'color-mix(in srgb, var(--good) 12%, transparent)' : v(r) > 0 ? 'var(--warn)' : 'var(--good)'))
+    .style('stroke', (r) => (r.laufend ? 'var(--good)' : 'none'))
+    .attr('stroke-width', 1.5).attr('stroke-dasharray', (r) => (r.laufend ? '4 3' : null));
 
-  // Trendlinie: lineare Regression über die abgeschlossenen Wochen
-  const fit = rows.map((r, i) => ({ i, v: r.abn, r })).filter((p) => !p.r.laufend);
-  if (fit.length >= 3) {
-    const mi = d3.mean(fit, (p) => p.i), mv = d3.mean(fit, (p) => p.v);
-    const slope = d3.sum(fit, (p) => (p.i - mi) * (p.v - mv)) / d3.sum(fit, (p) => (p.i - mi) ** 2);
-    const at = (i) => mv + slope * (i - mi);
-    const cx = (i) => x(rows[i].kw) + x.bandwidth() / 2;
-    const i0 = fit[0].i, i1 = fit[fit.length - 1].i;
-    svg.append('line').attr('x1', cx(i0)).attr('x2', cx(i1)).attr('y1', y(at(i0))).attr('y2', y(at(i1)))
-      .style('stroke', 'var(--accent)').attr('stroke-width', 2).attr('stroke-dasharray', '6 4').attr('stroke-linecap', 'round').style('opacity', 0.85).style('pointer-events', 'none');
-  }
+  // Werte an den Säulenenden, immer mit Vorzeichen
+  const sign = (x) => (x > 0 ? '+' : x < 0 ? '−' : '±');
+  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'bl').attr('text-anchor', 'middle')
+    .attr('x', cx)
+    .attr('y', (r) => (v(r) > 0 ? y(v(r)) - 7 : Math.max(y(0), y(v(r))) + 16))
+    .style('fill', (r) => (v(r) > 0 ? 'var(--warn)' : 'var(--fg)'))
+    .text((r) => sign(v(r)) + nf(2).format(Math.abs(v(r))));
 
-  if (x.bandwidth() >= 36) {
-    svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'barlabel')
-      .attr('x', (r) => x(r.kw) + x.bandwidth() / 2).attr('y', (r) => (r.abn >= 0 ? y(r.abn) - 5 : y(r.abn) + 13)).attr('text-anchor', 'middle')
-      .style('fill', (r) => (r.abn < 0 ? 'var(--warn)' : 'var(--fg)'))
-      .text((r) => minus(nf(2).format(r.abn)));
-  }
-  const every = Math.max(1, Math.ceil((rows.length * 44) / Math.max(1, W - m.l - m.r)));
-  svg.append('g').selectAll('text').data(rows.filter((r, i) => (rows.length - 1 - i) % every === 0)).join('text')
-    .attr('class', 'tick').attr('x', (r) => x(r.kw) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').text((r) => 'KW ' + r.kw);
+  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').attr('text-anchor', 'middle')
+    .attr('x', cx).attr('y', yLab).text((r) => 'KW ' + r.kw);
 
-  const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
-  const reset = () => { tip.hidden = true; bars.style('opacity', 1); };
-  // Eine Fläche über dem ganzen Diagramm: die Woche ergibt sich aus der Fingerposition (funktioniert auch beim Streichen)
-  const nearest = (px) => d3.least(rows, (q) => Math.abs(x(q.kw) + x.bandwidth() / 2 - px));
-  svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
-    .style('fill', 'transparent')
-    .on('pointerdown pointermove', (ev) => {
-      const r = nearest(d3.pointer(ev, svg.node())[0]);
-      bars.style('opacity', (b) => (b === r ? 1 : 0.45));
-      const line = el('div');
-      line.append(el('b', null, (r.abn < 0 ? '+' + kg2(-r.abn) + ' kg zugenommen' : kg2(r.abn) + ' kg abgenommen')));
-      const extra = el('div', 'd', (r.abn >= 0 ? '≈ ' + nf(0).format(r.kcal) + ' kcal Defizit/Tag' : '≈ ' + nf(0).format(-r.kcal) + ' kcal zu viel/Tag') + (r.laufend ? ' · Woche läuft noch' : ''));
-      tip.replaceChildren(el('div', 'd', 'KW ' + r.kw), line, extra);
-      tip.hidden = false;
-      const scale = box.clientWidth / W, cx = (x(r.kw) + x.bandwidth() / 2) * scale;
-      let left = cx + 12;
-      if (left + tip.offsetWidth > box.clientWidth) left = Math.max(0, cx - tip.offsetWidth - 12);
-      tip.style.left = left + 'px';
-      tip.style.top = Math.max(0, Math.min(y(r.abn), y(0)) * scale - 40) + 'px';
-    })
-    .on('pointerleave', (ev) => { if (ev.pointerType === 'mouse') reset(); });
-  hideTips.push(reset);
+  // Darunter: Defizit bzw. Überschuss pro Tag
+  svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', ySep).attr('y2', ySep).style('stroke', 'var(--line)');
+  svg.append('text').attr('class', 'kcalcap').attr('x', 0).attr('y', yCap).text('DEFIZIT PRO TAG, KCAL');
+  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'kcalv').attr('text-anchor', 'middle')
+    .attr('x', cx).attr('y', yKcal)
+    .style('fill', (r) => (r.laufend ? 'var(--muted)' : r.kcal < 0 ? 'var(--warn)' : 'var(--fg)'))
+    .text((r) => (r.laufend ? 'offen' : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal))));
 }
 
 function render() {
