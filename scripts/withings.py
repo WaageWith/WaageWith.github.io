@@ -226,6 +226,14 @@ def cmd_auth(callback_url: str) -> None:
     print("Withings verbunden.")
 
 
+def cmd_demo() -> None:
+    """Schreibt erfundene Beispielwerte, um die App vor der echten Verbindung auszuprobieren."""
+    rows = json.loads((ROOT / "scripts" / "beispiel.json").read_text())
+    changed = write_data({"messungen": rows, "einstellungen": {**config(), "beispiel": True}})
+    print(f"Beispieldaten geschrieben: {changed}")
+    output("changed", "true" if changed else "false")
+
+
 def cmd_connect(topic: str, minutes: int = 15) -> None:
     """Wartet auf die Rückmeldung der Seite callback.html (über ntfy.sh) und tauscht den Code sofort ein."""
     deadline = time.time() + minutes * 60
@@ -256,6 +264,8 @@ def main() -> None:
         cmd_fetch()
     elif cmd == "auth" and len(sys.argv) > 2:
         cmd_auth(sys.argv[2])
+    elif cmd == "demo":
+        cmd_demo()
     elif cmd == "connect":
         cmd_connect(env("RELAY_TOPIC"))
     elif cmd == "newkey":

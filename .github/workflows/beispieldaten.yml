@@ -1,0 +1,41 @@
+name: Beispieldaten anzeigen
+
+# Zum Ausprobieren der App vor der echten Verbindung. Der nächste echte Abruf ersetzt die Werte.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: withings-abruf
+  cancel-in-progress: false
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.demo.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet --disable-pip-version-check cryptography==44.0.0
+      - id: demo
+        env:
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+        run: python scripts/withings.py demo
+      - run: |
+          git config user.name "waage-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data.enc.json
+          git diff --cached --quiet || { git commit -q -m "Beispieldaten"; git push -q; }
+
+  veroeffentlichen:
+    needs: demo
+    if: needs.demo.outputs.changed == 'true'
+    uses: ./.github/workflows/seite.yml

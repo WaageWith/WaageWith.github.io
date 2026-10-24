@@ -282,7 +282,7 @@ function weeks() {
 
 /* ---------- Kopf & Kennzahlen ---------- */
 function drawTop(s) {
-  $('meta').textContent = 'Stand ' + fLong.format(new Date(s.last));
+  $('meta').textContent = (cfg.beispiel ? 'Beispieldaten · ' : '') + 'Stand ' + fLong.format(new Date(s.last));
   const diff = s.start.w - s.lastW;
   const withUnit = (id, txt, unit) => {
     const sign = /^[−+]/.test(txt) ? txt[0] : '';
