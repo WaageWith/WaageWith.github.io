@@ -194,8 +194,8 @@ html { -webkit-text-size-adjust: 100%; }
   </section>
 
   <section class="kpis" aria-label="Kennzahlen">
-    <div class="panel kpi" id="t-woche"><span class="lbl">Pro Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-woche">–</span><span class="sub">Ø 4 Wochen</span></div>
-    <div class="panel kpi" id="t-vw"><span class="lbl">Zur Vorwoche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-vw">–</span><span class="sub">im Schnitt</span></div>
+    <div class="panel kpi" id="t-woche"><span class="lbl">Pro Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-woche">–</span><span class="sub" id="k-woche-sub">Ø letzte 4 Wochen</span></div>
+    <div class="panel kpi" id="t-vw"><span class="lbl">Diese Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-vw">–</span><span class="sub">bisher, seit Sonntag</span></div>
   </section>
 
   <section class="panel card" id="wochen">
@@ -239,45 +239,42 @@ let pts = [];
 let cfg = {};
 const mean = (a) => a.reduce((s, p) => s + p.w, 0) / a.length;
 
-function summary() {
-  const last = pts[pts.length - 1].t;
-  const win = (from, to) => pts.filter((p) => p.t > last - from * DAY && p.t <= last - to * DAY);
-  const jetzt = mean(win(7, 0));
-  const vw = win(14, 7);
-  const reg = win(28, 0);
-  const mx = reg.reduce((s, p) => s + p.t, 0) / reg.length, my = mean(reg);
-  const den = reg.reduce((s, p) => s + (p.t - mx) ** 2, 0);
-  const proWoche = den ? -(reg.reduce((s, p) => s + (p.t - mx) * (p.w - my), 0) / den) * DAY * 7 : 0;
-  const ziel = Number(cfg.ziel_kg);
-  const hatZiel = Number.isFinite(ziel) && ziel > 0;
-  const wochen = hatZiel && proWoche > 0 && jetzt > ziel ? (jetzt - ziel) / proWoche : null;
-  return {
-    jetzt, start: pts[0], last, lastW: pts[pts.length - 1].w,
-    vorwoche: vw.length ? jetzt - mean(vw) : null,
-    proWoche,
-    defizit: Math.round((proWoche * 7700) / 7 / 10) * 10,
-    ziel: hatZiel ? ziel : null,
-    zielDatum: wochen != null ? new Date(last + wochen * 7 * DAY) : null,
-  };
-}
-
+// Alle Kennzahlen aus echten Messwerten, Wochen von Montag bis Sonntag.
+// Wochenwert = letzte Messung der Woche minus letzte Messung der Woche davor
+// (erste Woche: minus Startmessung). So ergibt die Summe aller Wochen genau die Gesamtabnahme.
 function weeks() {
   const monday = (t) => t - ((new Date(t).getUTCDay() + 6) % 7) * DAY;
   const groups = new Map();
   for (const p of pts) { const m = monday(p.t); if (!groups.has(m)) groups.set(m, []); groups.get(m).push(p); }
   const last = pts[pts.length - 1].t;
-  const out = []; let prev = null;
+  const out = [];
+  let ref = pts[0];
   for (const m of [...groups.keys()].sort((a, b) => a - b)) {
-    const avg = mean(groups.get(m));
+    const g = groups.get(m);
+    const end = g[g.length - 1];
+    if (end === ref) continue; // nur die Startmessung in dieser Woche
     const thu = new Date(m + 3 * DAY), y = thu.getUTCFullYear();
     const kw = Math.floor((thu - Date.UTC(y, 0, 1)) / DAY / 7) + 1;
-    if (prev != null) {
-      const abn = prev - avg;
-      out.push({ kw, von: new Date(m), bis: new Date(m + 6 * DAY), abn, kcal: Math.round((abn * 7700) / 7 / 10) * 10, laufend: m + 6 * DAY > last });
-    }
-    prev = avg;
+    const abn = ref.w - end.w; // positiv = abgenommen
+    const tage = Math.max(1, Math.round((end.t - ref.t) / DAY));
+    out.push({ kw, von: new Date(m), bis: new Date(m + 6 * DAY), abn, tage, kcal: Math.round((abn * 7700) / tage / 10) * 10, laufend: m + 6 * DAY >= last });
+    ref = end;
   }
   return out;
+}
+
+function summary() {
+  const wk = weeks();
+  const done = wk.filter((r) => !r.laufend);
+  const last4 = done.slice(-4);
+  const cur = wk.length && wk[wk.length - 1].laufend ? wk[wk.length - 1] : null;
+  return {
+    start: pts[0], last: pts[pts.length - 1].t, lastW: pts[pts.length - 1].w,
+    proWoche: last4.length ? last4.reduce((s, r) => s + r.abn, 0) / last4.length : null,
+    anzahlWochen: last4.length,
+    dieseWoche: cur ? cur.abn : null,
+    ziel: null,
+  };
 }
 
 /* ---------- Kopf & Kennzahlen ---------- */
@@ -296,13 +293,14 @@ function drawTop(s) {
   const tile = (id, valId, change) => {
     const t = $(id);
     t.classList.remove('good', 'bad');
-    if (change == null) return;
+    if (change == null) { $(valId).textContent = '–'; t.querySelector('.ico').textContent = ''; return; }
     withUnit(valId, (change > 0 ? '+' : change < 0 ? '−' : '') + kg2(Math.abs(change)), 'kg');
     t.classList.add(change <= 0 ? 'good' : 'bad');
     t.querySelector('.ico').textContent = change <= 0 ? '↓' : '↑';
   };
-  tile('t-woche', 'k-woche', -s.proWoche);
-  tile('t-vw', 'k-vw', s.vorwoche);
+  tile('t-woche', 'k-woche', s.proWoche == null ? null : -s.proWoche);
+  $('k-woche-sub').textContent = s.anzahlWochen >= 4 ? 'Ø letzte 4 Wochen' : s.anzahlWochen > 1 ? 'Ø letzte ' + s.anzahlWochen + ' Wochen' : 'letzte Woche';
+  tile('t-vw', 'k-vw', s.dieseWoche == null ? null : -s.dieseWoche);
 }
 
 /* ---------- Wochen ---------- */
