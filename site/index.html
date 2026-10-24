@@ -119,7 +119,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 
 /* Kurve */
 .chart { position: relative; }
-.chart svg { display: block; }
+.chart svg { display: block; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .tick { fill: var(--muted); font-size: 12px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .endlabel { fill: var(--fg); font-size: 13px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); }
@@ -333,6 +333,12 @@ function drawWeeks(rows) {
 }
 $('more').addEventListener('click', () => { showAll = !showAll; drawWeeks(weeks()); });
 
+/* ---------- Tooltips bei Touch: Tippen außerhalb eines Diagramms blendet sie aus ---------- */
+let hideTips = [];
+document.addEventListener('pointerdown', (ev) => {
+  if (!ev.target.closest || !ev.target.closest('.chart')) hideTips.forEach((f) => f());
+});
+
 /* ---------- Gewichtskurve ---------- */
 function drawChart(ziel) {
   const rows = pts.map((p) => ({ d: new Date(p.t), w: p.w, tr: mean(pts.filter((q) => q.t > p.t - 7 * DAY && q.t <= p.t)) }));
@@ -368,7 +374,7 @@ function drawChart(ziel) {
   const hl = hover.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--line)');
   const hd = hover.append('circle').attr('r', 4.5).style('fill', 'var(--accent)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
   svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
-    .style('fill', 'transparent').style('touch-action', 'pan-y')
+    .style('fill', 'transparent')
     .on('pointermove pointerdown', (ev) => {
       const [px] = d3.pointer(ev, svg.node());
       const t0 = x.invert(px);
@@ -385,7 +391,9 @@ function drawChart(ziel) {
       tip.style.left = left + 'px';
       tip.style.top = Math.max(0, y(r.tr) * scale - 52) + 'px';
     })
-    .on('pointerleave', () => { hover.style('display', 'none'); tip.hidden = true; });
+    // Mit der Maus beim Verlassen ausblenden; mit dem Finger stehen lassen (Tippen außerhalb blendet aus)
+    .on('pointerleave', (ev) => { if (ev.pointerType === 'mouse') { hover.style('display', 'none'); tip.hidden = true; } });
+  hideTips.push(() => { hover.style('display', 'none'); tip.hidden = true; });
 }
 
 /* ---------- Wochenabnahme als Säulen ---------- */
@@ -444,10 +452,12 @@ function drawWeekBars(all) {
 
   const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
   const reset = () => { tip.hidden = true; bars.style('opacity', 1); };
-  svg.append('g').selectAll('rect').data(rows).join('rect')
-    .attr('x', (r) => x(r.kw) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.t - m.b)
-    .style('fill', 'transparent').style('touch-action', 'pan-y')
-    .on('pointerenter pointerdown', (ev, r) => {
+  // Eine Fläche über dem ganzen Diagramm: die Woche ergibt sich aus der Fingerposition (funktioniert auch beim Streichen)
+  const nearest = (px) => d3.least(rows, (q) => Math.abs(x(q.kw) + x.bandwidth() / 2 - px));
+  svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
+    .style('fill', 'transparent')
+    .on('pointerdown pointermove', (ev) => {
+      const r = nearest(d3.pointer(ev, svg.node())[0]);
       bars.style('opacity', (b) => (b === r ? 1 : 0.45));
       const line = el('div');
       line.append(el('b', null, (r.abn < 0 ? '+' + kg2(-r.abn) + ' kg zugenommen' : kg2(r.abn) + ' kg abgenommen')));
@@ -460,11 +470,13 @@ function drawWeekBars(all) {
       tip.style.left = left + 'px';
       tip.style.top = Math.max(0, Math.min(y(r.abn), y(0)) * scale - 40) + 'px';
     })
-    .on('pointerleave', reset);
+    .on('pointerleave', (ev) => { if (ev.pointerType === 'mouse') reset(); });
+  hideTips.push(reset);
 }
 
 function render() {
   if (!pts.length) return;
+  hideTips = [];
   const s = summary();
   drawTop(s);
   drawWeeks(weeks());
