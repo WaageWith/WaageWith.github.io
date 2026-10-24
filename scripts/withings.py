@@ -194,6 +194,10 @@ def keep_alive() -> None:
 # ---------- Befehle ----------
 
 def cmd_fetch() -> None:
+    if not STATE_FILE.exists():
+        print("Noch nicht mit Withings verbunden – Workflow „Withings verbinden“ ausführen.")
+        output("changed", "false")
+        return
     token = access_token()
     messungen = fetch_measurements(token)
     payload = {"messungen": messungen, "einstellungen": config()}
@@ -222,12 +226,38 @@ def cmd_auth(callback_url: str) -> None:
     print("Withings verbunden.")
 
 
+def cmd_connect(topic: str, minutes: int = 15) -> None:
+    """Wartet auf die Rückmeldung der Seite callback.html (über ntfy.sh) und tauscht den Code sofort ein."""
+    deadline = time.time() + minutes * 60
+    print(f"Warte bis zu {minutes} Minuten auf die Freigabe …", flush=True)
+    while time.time() < deadline:
+        url = f"https://ntfy.sh/{topic}/json?since={int(time.time()) - 5}"
+        try:
+            with urllib.request.urlopen(url, timeout=90) as res:
+                for line in res:
+                    if time.time() > deadline:
+                        break
+                    msg = json.loads(line or b"{}")
+                    if msg.get("event") != "message":
+                        continue
+                    try:
+                        cmd_auth(msg.get("message", ""))
+                        return
+                    except (RuntimeError, SystemExit) as e:
+                        print(f"Freigabe fehlgeschlagen: {e} – warte auf neuen Versuch.", flush=True)
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            time.sleep(2)
+    sys.exit("Keine Freigabe erhalten. Workflow einfach erneut starten.")
+
+
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else "fetch"
     if cmd == "fetch":
         cmd_fetch()
     elif cmd == "auth" and len(sys.argv) > 2:
         cmd_auth(sys.argv[2])
+    elif cmd == "connect":
+        cmd_connect(env("RELAY_TOPIC"))
     elif cmd == "newkey":
         print(Fernet.generate_key().decode())
     else:

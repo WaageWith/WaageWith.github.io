@@ -22,30 +22,29 @@ button { font: inherit; font-weight: 700; padding: 0.8rem; border: 0; border-rad
 <body>
 <main>
   <div class="box">
-    <h1 id="h">Freigabe erteilt</h1>
-    <p id="txt">Jetzt schnell: Adresse kopieren und an Claude schicken. Der Code gilt nur kurz (<span id="timer">30</span> Sekunden).</p>
-    <textarea id="url" readonly></textarea>
-    <button id="copy" type="button">Adresse kopieren</button>
+    <h1 id="h">Verbindung wird hergestellt …</h1>
+    <p id="txt">Einen Moment bitte.</p>
   </div>
 </main>
 <script>
+const TOPIC = 'waagewith-qy5jjsnr4wi487t4qsp2rvif';
 const params = new URLSearchParams(location.search);
-const url = document.getElementById('url');
-url.value = location.href;
+const h = document.getElementById('h'), txt = document.getElementById('txt');
 if (!params.get('code')) {
-  document.getElementById('h').textContent = 'Keine Freigabe gefunden';
-  document.getElementById('txt').textContent = params.get('error') ? 'Withings meldet: ' + params.get('error') : 'Diese Seite wird nach der Withings-Freigabe automatisch aufgerufen.';
+  h.textContent = 'Keine Freigabe gefunden';
+  txt.textContent = params.get('error') ? 'Withings meldet: ' + params.get('error') : 'Diese Seite wird nach der Freigabe bei Withings automatisch aufgerufen.';
+} else {
+  fetch('https://ntfy.sh/' + TOPIC, { method: 'POST', body: location.href })
+    .then((r) => {
+      if (!r.ok) throw new Error(r.status);
+      h.textContent = 'Freigabe übermittelt ✓';
+      txt.textContent = 'Dieses Fenster kann geschlossen werden. Wenn alles geklappt hat, erscheinen die Werte in wenigen Minuten in der App.';
+    })
+    .catch(() => {
+      h.textContent = 'Das hat nicht geklappt';
+      txt.textContent = 'Bitte die Freigabe in ein paar Minuten noch einmal starten.';
+    });
 }
-document.getElementById('copy').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(location.href); document.getElementById('copy').textContent = 'Kopiert ✓'; }
-  catch (e) { url.select(); }
-});
-let left = 30;
-const t = setInterval(() => {
-  left -= 1;
-  document.getElementById('timer').textContent = Math.max(0, left);
-  if (left <= 0) { clearInterval(t); document.getElementById('txt').innerHTML = '<span class="warn">Zeit abgelaufen.</span> Einfach die Freigabe noch einmal starten.'; }
-}, 1000);
 </script>
 </body>
 </html>
