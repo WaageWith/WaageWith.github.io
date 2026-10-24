@@ -60,7 +60,9 @@ h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem;
 .meta { margin: 0; font-size: 0.875rem; color: var(--muted); }
 .meta b { color: var(--fg); font-weight: 600; }
 
-.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+/* Am Handy: zwei Kacheln oben, „Diese Woche“ darunter über die volle Breite */
+@media (max-width: 640px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kpis #t-vw { grid-column: 1 / -1; } }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
 .kpi { padding: 1.125rem 1.25rem 1.125rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "lbl ico" "val val" "sub sub"; row-gap: 0.35rem; align-items: center; }
 .kpi .lbl { grid-area: lbl; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -72,6 +74,7 @@ h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem;
 .kpi.good .kval { color: var(--good-ink); }
 .kpi.good .kval small { color: var(--good-ink); opacity: 0.75; }
 .kpi.bad .kval { color: var(--warn); }
+.kpi.bad .kval small { color: var(--warn); opacity: 0.75; }
 .kpi .sub { grid-area: sub; font-size: 0.8125rem; color: var(--muted); }
 
 .card { padding: 1.25rem 1.25rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
@@ -196,6 +199,7 @@ html { -webkit-text-size-adjust: 100%; }
 
   <section class="kpis" aria-label="Kennzahlen">
     <div class="panel kpi" id="t-woche"><span class="lbl">Pro Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-woche">–</span><span class="sub" id="k-woche-sub">Ø letzte 4 Wochen</span></div>
+    <div class="panel kpi" id="t-kcal"><span class="lbl">kcal/Tag</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-kcal">–</span><span class="sub" id="k-kcal-sub">Ø letzte 4 Wochen</span></div>
     <div class="panel kpi" id="t-vw"><span class="lbl">Diese Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-vw">–</span><span class="sub">bisher, seit Sonntag</span></div>
   </section>
 
@@ -273,6 +277,8 @@ function summary() {
     start: pts[0], last: pts[pts.length - 1].t, lastW: pts[pts.length - 1].w,
     proWoche: last4.length ? last4.reduce((s, r) => s + r.abn, 0) / last4.length : null,
     anzahlWochen: last4.length,
+    // Ø kcal pro Tag über die letzten 4 abgeschlossenen Wochen (Defizit negativ)
+    kcal4: last4.length ? -Math.round((last4.reduce((s, r) => s + r.abn, 0) * 7700) / last4.reduce((s, r) => s + r.tage, 0) / 10) * 10 : null,
     dieseWoche: cur ? cur.abn : null,
     ziel: null,
   };
@@ -309,6 +315,15 @@ function drawTop(s) {
   tile('t-woche', 'k-woche', s.proWoche == null ? null : -s.proWoche);
   $('k-woche-sub').textContent = s.anzahlWochen >= 4 ? 'Ø letzte 4 Wochen' : s.anzahlWochen > 1 ? 'Ø letzte ' + s.anzahlWochen + ' Wochen' : 'letzte Woche';
   tile('t-vw', 'k-vw', s.dieseWoche == null ? null : -s.dieseWoche);
+  const tk = $('t-kcal');
+  tk.classList.remove('good', 'bad');
+  if (s.kcal4 == null) { $('k-kcal').textContent = '–'; tk.querySelector('.ico').textContent = ''; }
+  else {
+    withUnit('k-kcal', (s.kcal4 > 0 ? '+' : s.kcal4 < 0 ? '−' : '±') + nf(0).format(Math.abs(s.kcal4)), 'kcal');
+    tk.classList.add(s.kcal4 <= 0 ? 'good' : 'bad');
+    tk.querySelector('.ico').textContent = s.kcal4 <= 0 ? '↓' : '↑';
+  }
+  $('k-kcal-sub').textContent = $('k-woche-sub').textContent;
 }
 
 /* ---------- Wochen ---------- */
