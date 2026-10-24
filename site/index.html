@@ -63,7 +63,7 @@ h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem;
 .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
 /* Am Handy: alle drei Kacheln in einer Reihe, dafür kompakter */
 @media (max-width: 640px) {
-  .kpis { gap: 0.5rem; }
+  .kpis { gap: 0.4rem; margin-inline: -9px; }
   .kpis .kpi { padding: 0.75rem 0.6rem; grid-template-areas: "lbl" "val" "sub"; grid-template-columns: minmax(0, 1fr); }
   .kpis .kpi .ico { display: none; }
   .kpis .kpi .lbl { font-size: 0.625rem; letter-spacing: 0.06em; }
@@ -213,7 +213,7 @@ html { -webkit-text-size-adjust: 100%; }
   <section class="kpis" aria-label="Kennzahlen">
     <div class="panel kpi" id="t-woche"><span class="lbl">Pro Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-woche">–</span><span class="sub" id="k-woche-sub">Ø letzte 4 Wochen</span></div>
     <div class="panel kpi" id="t-kcal"><span class="lbl">kcal/Tag</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-kcal">–</span><span class="sub" id="k-kcal-sub">Ø letzte 4 Wochen</span></div>
-    <div class="panel kpi" id="t-vw"><span class="lbl">Diese Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-vw">–</span><span class="sub">bisher, seit Sonntag</span></div>
+    <div class="panel kpi" id="t-vw"><span class="lbl">Diese Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-vw">–</span><span class="sub">seit Sonntag</span></div>
   </section>
 
   <section class="panel card" id="wochen">
