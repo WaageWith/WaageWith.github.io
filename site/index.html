@@ -90,9 +90,10 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .wk { padding-right: 1rem; line-height: 1.25; }
 .wk b { display: block; font-weight: 600; font-size: 0.9375rem; }
 .wk span { display: block; font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
-.track { height: 18px; border-radius: 6px; background: var(--grid); }
+.track { position: relative; height: 18px; border-radius: 6px; background: var(--grid); }
+.track .zero { position: absolute; top: -3px; bottom: -3px; width: 1.5px; margin-left: -0.75px; background: var(--mark); border-radius: 1px; }
 .trackcell .track { width: 100%; }
-.bar { height: 100%; border-radius: 6px; background: var(--good); min-width: 4px; }
+.bar { position: absolute; top: 0; bottom: 0; border-radius: 6px; background: var(--good); min-width: 4px; }
 .wval { align-items: flex-end; padding-left: 1rem; font-weight: 800; font-size: 1.375rem; letter-spacing: -0.01em; white-space: nowrap; }
 .kcal { align-items: flex-end; padding-left: 1rem; font-size: 0.8125rem; font-weight: 600; color: var(--muted); white-space: nowrap; min-width: 5.5rem; }
 .week.up .kcal, .week.up .wk b, .week.up .wk span { color: var(--warn); }
@@ -332,7 +333,11 @@ function drawWeeks(rows) {
   const SHOW = 8;
   const list = [...rows].reverse();
   const visible = showAll ? list : list.slice(0, SHOW);
-  const max = d3.max(rows, (r) => Math.abs(r.abn)) || 1;
+  // Gemeinsame Skala: Abnahme nach rechts (grün), Zunahme nach links (rot), Nulllinie dazwischen
+  const maxLoss = Math.max(0, d3.max(rows, (r) => r.abn) || 0);
+  const maxGain = Math.max(0, d3.max(rows, (r) => -r.abn) || 0);
+  const span = maxLoss + maxGain || 1;
+  const zero = (maxGain / span) * 100;
   const dm = (d) => `${d.getUTCDate()}.${d.getUTCMonth() + 1}.`;
   $('weeks').replaceChildren(...visible.map((r) => {
     const li = el('li', 'week' + (r.abn < 0 ? ' up' : '') + (r.laufend ? ' now' : ''));
@@ -341,8 +346,12 @@ function drawWeeks(rows) {
     const cell = el('div', 'trackcell');
     const track = el('div', 'track');
     const bar = el('div', 'bar');
-    bar.style.width = (Math.abs(r.abn) / max) * 100 + '%';
-    track.append(bar); cell.append(track);
+    const w = (Math.abs(r.abn) / span) * 100;
+    bar.style.width = w + '%';
+    bar.style.left = (r.abn >= 0 ? zero : zero - w) + '%';
+    track.append(bar);
+    if (maxGain > 0) { const z = el('div', 'zero'); z.style.left = zero + '%'; track.append(z); }
+    cell.append(track);
     const val = el('div', 'wval', (r.abn > 0 ? '−' : r.abn < 0 ? '+' : '±') + kg2(Math.abs(r.abn)) + ' kg');
     // Abnahme: Defizit pro Tag. Zunahme: so viel pro Tag mehr gegessen als verbraucht (mit +)
     const kcal = el('div', 'kcal', (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal)) + ' kcal');
