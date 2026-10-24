@@ -49,18 +49,16 @@ body { background: var(--bg); color: var(--fg); font-family: var(--sans); margin
 header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; flex-wrap: wrap; }
 .hero {
   display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto auto; justify-content: start;
-  column-gap: 0; row-gap: 0.35rem; padding-block: 0.5rem 1.25rem; border-bottom: 1px solid var(--line); margin-bottom: 0.25rem;
+  column-gap: 0; row-gap: 0.3rem; padding-block: 0.5rem 0.75rem;
 }
 .hero .hcol { display: grid; grid-row: span 3; grid-template-rows: subgrid; gap: 0; min-width: 0; }
-.hero .hcol + .hcol { border-left: 1px solid var(--line); padding-left: clamp(0.7rem, 3vw, 2rem); margin-left: clamp(0.6rem, 3vw, 2rem); }
-.hero .lbl { grid-row: 1; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.hero .sub { grid-row: 2; justify-self: start; align-self: start; font-size: 0.8125rem; font-weight: 600; color: var(--good-ink); background: color-mix(in srgb, var(--good) 13%, transparent); border-radius: 999px; padding: 0.15rem 0.6rem; margin-top: 0.2rem; white-space: nowrap; }
-.hero .big { grid-row: 3; align-self: last baseline; margin-top: 0.35rem; font-weight: 800; line-height: 0.95; letter-spacing: -0.04em; white-space: nowrap; }
-.hero .big.xl { font-size: clamp(3.2rem, 14.5vw, 8.5rem); color: var(--fg); }
-.hero .big.accent { font-size: clamp(2.6rem, 12vw, 6.5rem); color: var(--good-ink); }
-.hero .big small { font-size: 0.32em; font-weight: 600; letter-spacing: 0; margin-left: 0.4em; color: var(--muted); }
-.hero .big.accent small { color: var(--good-ink); opacity: 0.75; }
-.hero .sub.neutral { color: var(--muted); background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.hero .hcol + .hcol { border-left: 1px solid var(--line); padding-left: clamp(0.9rem, 5vw, 2.5rem); margin-left: clamp(0.9rem, 5vw, 2.5rem); }
+.hero .lbl { grid-row: 1; font-size: 1rem; font-weight: 500; color: var(--muted); }
+.hero .big { grid-row: 2; align-self: last baseline; font-weight: 800; line-height: 1; letter-spacing: -0.035em; white-space: nowrap; font-size: clamp(2.3rem, 10.5vw, 6.5rem); color: var(--fg); }
+.hero .big.accent { color: var(--good-ink); }
+.hero .big small { font-size: 0.34em; font-weight: 700; letter-spacing: 0; margin-left: 0.35em; color: var(--fg); }
+.hero .big.accent small { color: var(--good-ink); }
+.hero .sub { grid-row: 3; font-size: 0.9375rem; color: var(--muted); white-space: nowrap; }
 .titlerow { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
 h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem; letter-spacing: -0.01em; line-height: 1.1; }
 .pill { font-size: 0.75rem; font-weight: 600; color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 0.05rem 0.55rem; }
@@ -188,13 +186,13 @@ html { -webkit-text-size-adjust: 100%; }
   <section class="hero" aria-label="Gesamt">
     <div class="hcol">
       <span class="lbl">Aktuelles Gewicht</span>
-      <span class="sub neutral tnum" id="meta">&nbsp;</span>
-      <div class="big xl tnum" id="aktuell">–</div>
+      <div class="big tnum" id="aktuell">–</div>
+      <span class="sub tnum" id="meta">&nbsp;</span>
     </div>
     <div class="hcol">
       <span class="lbl" id="seit">Abgenommen</span>
-      <span class="sub tnum" id="start">&nbsp;</span>
       <div class="big accent tnum" id="gesamt">–</div>
+      <span class="sub tnum" id="start">&nbsp;</span>
     </div>
   </section>
 
@@ -290,8 +288,8 @@ function drawTop(s) {
   const isoBerlin = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(d);
   const heute = Date.parse(isoBerlin(new Date()) + 'T00:00:00Z');
   const tageHer = Math.round((heute - s.last) / DAY);
-  const tag = tageHer === 0 ? 'Heute' : tageHer === 1 ? 'Gestern' : fLong.format(new Date(s.last));
-  $('meta').textContent = tag + (lz ? ' ' + lz.replace(/^0/, '') + ' Uhr' : '');
+  const tag = tageHer === 0 ? 'heute' : tageHer === 1 ? 'gestern' : fLong.format(new Date(s.last));
+  $('meta').textContent = tag + (lz ? ', ' + lz.replace(/^0/, '') + ' Uhr' : '');
   const diff = s.start.w - s.lastW;
   const withUnit = (id, txt, unit) => {
     const sign = /^[−+]/.test(txt) ? txt[0] : '';
@@ -299,7 +297,7 @@ function drawTop(s) {
   };
   $('seit').textContent = diff >= 0 ? 'Abgenommen' : 'Zugenommen';
   withUnit('gesamt', (diff >= 0 ? '−' : '+') + kg1(Math.abs(diff)), 'kg');
-  $('start').textContent = 'seit ' + fLong.format(new Date(s.start.t)) + ' (' + kg1(s.start.w) + ' kg)';
+  $('start').textContent = 'seit ' + fLong.format(new Date(s.start.t)) + ' · ' + kg1(s.start.w) + ' kg';
   withUnit('aktuell', kg1(s.lastW), 'kg');
   // Veränderung als Vorzeichen: minus = abgenommen
   const tile = (id, valId, change) => {
@@ -413,8 +411,8 @@ function drawWeekBars(all) {
   box.replaceChildren();
   if (!all.length) return;
   const W = Math.max(280, box.clientWidth);
-  // So viele Wochen wie bequem nebeneinander passen (neueste rechts)
-  const rows = all.slice(-Math.max(4, Math.min(all.length, Math.floor(W / 54))));
+  // Die letzten 8 Wochen (neueste rechts)
+  const rows = all.slice(-8);
   const v = (r) => -r.abn; // Veränderung in kg: Abnahme nach unten, Zunahme nach oben
   const vmin = Math.min(0, d3.min(rows, v)), vmax = Math.max(0, d3.max(rows, v));
   const plotH = W < 520 ? 150 : 190;
@@ -427,6 +425,8 @@ function drawWeekBars(all) {
   const bw = Math.min(48, x.bandwidth());
   const cx = (r) => x(r.kw) + x.bandwidth() / 2;
   const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche');
+  // Am schmalen Handy etwas kleinere Zahlen, damit sich Nachbarn nicht berühren
+  const fs = x.step() < 48 ? { bl: '10.5px', kcal: '11px', tick: '11px' } : { bl: '12px', kcal: '13px', tick: '12px' };
 
   svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--line)').attr('stroke-width', 1.5);
 
@@ -444,19 +444,19 @@ function drawWeekBars(all) {
 
   // Werte an den Säulenenden, immer mit Vorzeichen
   const sign = (x) => (x > 0 ? '+' : x < 0 ? '−' : '±');
-  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'bl').attr('text-anchor', 'middle')
+  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'bl').style('font-size', fs.bl).attr('text-anchor', 'middle')
     .attr('x', cx)
     .attr('y', (r) => (v(r) > 0 ? y(v(r)) - 7 : Math.max(y(0), y(v(r))) + 16))
     .style('fill', (r) => (v(r) > 0 ? 'var(--warn)' : 'var(--fg)'))
     .text((r) => sign(v(r)) + nf(2).format(Math.abs(v(r))));
 
-  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').attr('text-anchor', 'middle')
-    .attr('x', cx).attr('y', yLab).text((r) => 'KW ' + r.kw);
+  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').style('font-size', fs.tick).attr('text-anchor', 'middle')
+    .attr('x', cx).attr('y', yLab).text((r, i) => (x.step() < 48 && i > 0 ? '' : 'KW ') + r.kw);
 
   // Darunter: Defizit bzw. Überschuss pro Tag
   svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', ySep).attr('y2', ySep).style('stroke', 'var(--line)');
   svg.append('text').attr('class', 'kcalcap').attr('x', 0).attr('y', yCap).text('DEFIZIT PRO TAG, KCAL');
-  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'kcalv').attr('text-anchor', 'middle')
+  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'kcalv').style('font-size', fs.kcal).attr('text-anchor', 'middle')
     .attr('x', cx).attr('y', yKcal)
     .style('fill', (r) => (r.laufend ? 'var(--muted)' : r.kcal < 0 ? 'var(--warn)' : 'var(--fg)'))
     .text((r) => (r.laufend ? 'offen' : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal))));
