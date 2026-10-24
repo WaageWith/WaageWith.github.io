@@ -322,7 +322,7 @@ function drawWeeks(rows) {
     const bar = el('div', 'bar');
     bar.style.width = (Math.abs(r.abn) / max) * 100 + '%';
     track.append(bar); cell.append(track);
-    const val = el('div', 'wval', (r.abn < 0 ? '+' : '') + kg2(Math.abs(r.abn)) + ' kg');
+    const val = el('div', 'wval', (r.abn > 0 ? '−' : r.abn < 0 ? '+' : '±') + kg2(Math.abs(r.abn)) + ' kg');
     const kcal = el('div', 'kcal', r.abn < 0 ? 'zugenommen' : nf(0).format(r.kcal) + ' kcal');
     li.append(wk, cell, val, kcal);
     return li;
