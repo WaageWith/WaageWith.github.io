@@ -199,7 +199,7 @@ html { -webkit-text-size-adjust: 100%; }
   </section>
 
   <section class="panel card" id="wochen">
-    <div class="card-head"><h2>Abnahme pro Woche</h2><span class="note energy">Defizit pro Tag</span></div>
+    <div class="card-head"><h2>Abnahme pro Woche</h2><span class="note energy">Defizit bzw. <span style="color:var(--warn)">zu viel</span> pro Tag</span></div>
     <ul class="weeks tnum" id="weeks"></ul>
     <button class="more" id="more" type="button" hidden></button>
   </section>
@@ -321,7 +321,8 @@ function drawWeeks(rows) {
     bar.style.width = (Math.abs(r.abn) / max) * 100 + '%';
     track.append(bar); cell.append(track);
     const val = el('div', 'wval', (r.abn > 0 ? '−' : r.abn < 0 ? '+' : '±') + kg2(Math.abs(r.abn)) + ' kg');
-    const kcal = el('div', 'kcal', r.abn < 0 ? 'zugenommen' : nf(0).format(r.kcal) + ' kcal');
+    // Abnahme: Defizit pro Tag. Zunahme: so viel pro Tag mehr gegessen als verbraucht (mit +)
+    const kcal = el('div', 'kcal', r.abn < 0 ? '+' + nf(0).format(-r.kcal) + ' kcal' : nf(0).format(r.kcal) + ' kcal');
     li.append(wk, cell, val, kcal);
     return li;
   }));
@@ -459,7 +460,7 @@ function drawWeekBars(all) {
       bars.style('opacity', (b) => (b === r ? 1 : 0.45));
       const line = el('div');
       line.append(el('b', null, (r.abn < 0 ? '+' + kg2(-r.abn) + ' kg zugenommen' : kg2(r.abn) + ' kg abgenommen')));
-      const extra = el('div', 'd', r.laufend ? 'Woche läuft noch' : (r.abn > 0 ? '≈ ' + nf(0).format(r.kcal) + ' kcal Defizit/Tag' : ''));
+      const extra = el('div', 'd', (r.abn >= 0 ? '≈ ' + nf(0).format(r.kcal) + ' kcal Defizit/Tag' : '≈ ' + nf(0).format(-r.kcal) + ' kcal zu viel/Tag') + (r.laufend ? ' · Woche läuft noch' : ''));
       tip.replaceChildren(el('div', 'd', 'KW ' + r.kw), line, extra);
       tip.hidden = false;
       const scale = box.clientWidth / W, cx = (x(r.kw) + x.bandwidth() / 2) * scale;
