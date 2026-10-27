@@ -80,6 +80,8 @@ h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem;
 .meta b { color: var(--fg); font-weight: 600; }
 
 .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+/* Nur zwei Kacheln (wenn „Diese Woche“ ausgeblendet ist) */
+.kpis.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 /* Am Handy: alle drei Kacheln in einer Reihe, dafür kompakter */
 @media (max-width: 640px) {
   .kpis { gap: 0.3rem; }
@@ -89,6 +91,10 @@ h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem;
   .kpis .kpi .kval { font-size: clamp(1.3rem, 6.2vw, 2.4rem); }
   .kpis .kpi .sub { font-size: 0.6875rem; line-height: 1.3; }
   .kpis .kpi .kval small { margin-left: 0.25em; }
+  .kpis.two .kpi { padding: 0.9rem 0.9rem; }
+  .kpis.two .kpi .kval { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+  .kpis.two .kpi .lbl { font-size: 0.6875rem; }
+  .kpis.two .kpi .sub { font-size: 0.75rem; }
 }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
 .kpi { padding: 1.125rem 1.25rem 1.125rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "lbl ico" "val val" "sub sub"; row-gap: 0.35rem; align-items: center; }
@@ -292,6 +298,8 @@ html { -webkit-text-size-adjust: 100%; }
 
 <script src="d3.min.js"></script>
 <script>
+// Kachel „Diese Woche“ ein-/ausblenden: true = sichtbar, false = ausgeblendet
+const ZEIGE_DIESE_WOCHE = false;
 const DAY = 864e5;
 const nf = (min, max = min) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
 const minus = (s) => s.replace('-', '−');
@@ -673,6 +681,8 @@ $('themebtn').addEventListener('click', () => {
   document.querySelector('meta[name="theme-color"]').content = dark ? '#0e1117' : '#f4f5f7';
   try { localStorage.setItem('waage-theme', dark ? 'dark' : 'light'); } catch (e) {}
 });
+$('t-vw').hidden = !ZEIGE_DIESE_WOCHE;
+document.querySelector('.kpis').classList.toggle('two', !ZEIGE_DIESE_WOCHE);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 boot();
 </script>
