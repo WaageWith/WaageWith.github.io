@@ -102,6 +102,9 @@ h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem;
 .kpi.good .kval small { color: var(--good-ink); opacity: 0.75; }
 .kpi.bad .kval { color: var(--warn); }
 .kpi.bad .kval small { color: var(--warn); opacity: 0.75; }
+/* „Diese Woche“ ist noch vorläufig: grau hinterlegt */
+.kpi.minor { background: var(--grid); border-color: var(--grid); box-shadow: none; }
+.kpi.minor .ico { background: color-mix(in srgb, var(--fg) 8%, transparent); }
 /* Hauptwerte (Pro Woche, kcal/Tag): kräftig blau hinterlegt, weiße Schrift */
 .kpi.main, .kpi.main.good, .kpi.main.bad { background: var(--tile); border-color: var(--tile); box-shadow: 0 2px 8px color-mix(in srgb, var(--tile) 30%, transparent); }
 .kpi.main .lbl, .kpi.main .sub { color: rgba(255, 255, 255, 0.82); }
@@ -248,7 +251,7 @@ html { -webkit-text-size-adjust: 100%; }
   <section class="kpis" aria-label="Kennzahlen">
     <div class="panel kpi main" id="t-woche"><span class="lbl">Pro Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-woche">–</span><span class="sub" id="k-woche-sub">Ø letzte 4 Wochen</span></div>
     <div class="panel kpi main" id="t-kcal"><span class="lbl">kcal/Tag</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-kcal">–</span><span class="sub" id="k-kcal-sub">Ø letzte 4 Wochen</span></div>
-    <div class="panel kpi" id="t-vw"><span class="lbl">Diese Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-vw">–</span><span class="sub">seit Sonntag</span></div>
+    <div class="panel kpi minor" id="t-vw"><span class="lbl">Diese Woche</span><span class="ico" aria-hidden="true"></span><span class="kval tnum" id="k-vw">–</span><span class="sub">seit Sonntag</span></div>
   </section>
 
   <section class="panel card" id="wochen">
