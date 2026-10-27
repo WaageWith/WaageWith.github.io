@@ -36,6 +36,7 @@ try { if (localStorage.getItem('waage-theme') === 'dark') { document.documentEle
   --good-ink: #0c7a4e;
   --good-soft: #a3dcc2;
   --energy: #7048c9;
+  --tile: #2457d6;
   --shadow: 0 1px 3px rgba(16, 24, 40, 0.07);
   --sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -43,7 +44,7 @@ try { if (localStorage.getItem('waage-theme') === 'dark') { document.documentEle
   color-scheme: dark;
   --bg: #0e1117; --panel: #171b23; --fg: #e9ecf2; --muted: #a9b0bd; --line: #2f3642; --grid: #242a34; --mark: #6b7484;
   --accent: #82a6ff; --accent-soft: #2a3a5e; --warn: #ff7a66; --good: #36c486; --good-ink: #5fdca5; --good-soft: #285f47;
-  --energy: #b39cff; --shadow: none;
+  --energy: #b39cff; --shadow: none; --tile: #2c5cd0;
 }
 .themebtn { position: absolute; top: max(0.75rem, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); z-index: 5;
   width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--muted);
@@ -101,10 +102,12 @@ h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem;
 .kpi.good .kval small { color: var(--good-ink); opacity: 0.75; }
 .kpi.bad .kval { color: var(--warn); }
 .kpi.bad .kval small { color: var(--warn); opacity: 0.75; }
-/* Hauptwerte (Pro Woche, kcal/Tag) farbig hinterlegt */
-.kpi.main { background: color-mix(in srgb, var(--good) 9%, var(--panel)); border-color: color-mix(in srgb, var(--good) 40%, var(--line)); }
-.kpi.main.bad { background: color-mix(in srgb, var(--warn) 8%, var(--panel)); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
-.kpi.main .lbl { color: var(--fg); }
+/* Hauptwerte (Pro Woche, kcal/Tag): kräftig blau hinterlegt, weiße Schrift */
+.kpi.main, .kpi.main.good, .kpi.main.bad { background: var(--tile); border-color: var(--tile); box-shadow: 0 2px 8px color-mix(in srgb, var(--tile) 30%, transparent); }
+.kpi.main .lbl, .kpi.main .sub { color: rgba(255, 255, 255, 0.82); }
+.kpi.main .kval, .kpi.main .kval small, .kpi.main.good .kval, .kpi.main.bad .kval, .kpi.main.good .kval small, .kpi.main.bad .kval small { color: #fff; opacity: 1; }
+.kpi.main .kval small { opacity: 0.8; }
+.kpi.main .ico, .kpi.main.good .ico, .kpi.main.bad .ico { color: #fff; background: rgba(255, 255, 255, 0.18); }
 .kpi .sub { grid-area: sub; font-size: 0.8125rem; color: var(--muted); }
 
 .card { padding: 1.25rem 1.25rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
