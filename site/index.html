@@ -146,6 +146,12 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .week.up .wval { color: var(--warn); }
 .week.now .bar { background: color-mix(in srgb, var(--good) 14%, var(--panel)); border: 1.5px dashed var(--good); box-sizing: border-box; }
 .week.now .wval, .week.now .wk b { color: var(--muted); }
+/* Laufende Woche grau hinterlegt (noch nicht abgeschlossen) */
+.week.now > * { background: var(--grid); border-top-color: transparent; }
+.week.now > .wk { box-shadow: -0.6rem 0 0 var(--grid); border-radius: 8px 0 0 8px; }
+.week.now > .kcal { box-shadow: 0.6rem 0 0 var(--grid); border-radius: 0 8px 8px 0; }
+.week.now .track { background: var(--panel); }
+.week.now + .week > * { border-top-color: transparent; }
 /* Laufende Woche mit Zunahme: rot gestrichelt */
 .week.up.now .bar { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border-color: var(--warn); }
 .week.up.now .wval, .week.up.now .wk b, .week.up.now .kcal { color: var(--warn); }
