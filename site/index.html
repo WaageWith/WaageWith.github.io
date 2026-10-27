@@ -318,14 +318,30 @@ function weeks() {
 function summary() {
   const wk = weeks();
   const done = wk.filter((r) => !r.laufend);
-  const last4 = done.slice(-4);
   const cur = wk.length && wk[wk.length - 1].laufend ? wk[wk.length - 1] : null;
+
+  // „Pro Woche“ und „kcal/Tag“: 7-Tage-Schnitt am Ende der letzten abgeschlossenen Woche (Sonntag)
+  // minus 7-Tage-Schnitt 4 Wochen davor. Gleicht Tagesschwankungen durch Wasser usw. aus.
+  const avg7 = (t) => { const v = pts.filter((p) => p.t > t - 7 * DAY && p.t <= t); return v.length ? mean(v) : null; };
+  let proWoche = null, kcal4 = null, anzahl = 0;
+  if (done.length) {
+    const end = done[done.length - 1].bis.getTime();          // letzter abgeschlossener Sonntag
+    anzahl = Math.min(4, done.length);
+    let start = end - anzahl * 7 * DAY;
+    let wStart = avg7(start);
+    if (wStart == null) { start = pts[0].t; wStart = pts[0].w; } // noch nicht genug Vorlauf: ab erster Messung
+    const wEnd = avg7(end);
+    const tage = Math.max(1, (end - start) / DAY);
+    if (wEnd != null) {
+      proWoche = ((wStart - wEnd) / tage) * 7;                  // positiv = abgenommen
+      kcal4 = -Math.round(((wStart - wEnd) * 7700) / tage / 10) * 10;
+    }
+  }
   return {
     start: pts[0], last: pts[pts.length - 1].t, lastW: pts[pts.length - 1].w,
-    proWoche: last4.length ? last4.reduce((s, r) => s + r.abn, 0) / last4.length : null,
-    anzahlWochen: last4.length,
-    // Ø kcal pro Tag über die letzten 4 abgeschlossenen Wochen (Defizit negativ)
-    kcal4: last4.length ? -Math.round((last4.reduce((s, r) => s + r.abn, 0) * 7700) / last4.reduce((s, r) => s + r.tage, 0) / 10) * 10 : null,
+    proWoche,
+    anzahlWochen: anzahl,
+    kcal4,
     dieseWoche: cur ? cur.abn : null,
     ziel: null,
   };
