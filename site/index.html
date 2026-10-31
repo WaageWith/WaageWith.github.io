@@ -292,6 +292,13 @@ html { -webkit-text-size-adjust: 100%; }
     <div class="chart" id="chart-wochen"></div>
   </section>
 
+  <section class="panel card" id="monate">
+    <div class="card-head barhead"><h2>Ø Abnahme pro Woche je Monat</h2>
+      <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>läuft noch</span></div>
+    </div>
+    <div class="chart" id="chart-monate"></div>
+  </section>
+
 </div>
 
 </div>
@@ -314,6 +321,8 @@ const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls)
 let pts = [];
 let cfg = {};
 const mean = (a) => a.reduce((s, p) => s + p.w, 0) / a.length;
+// 7-Tage-Schnitt bis einschließlich t (null, wenn in diesen 7 Tagen nicht gemessen wurde)
+const avg7 = (t) => { const v = pts.filter((p) => p.t > t - 7 * DAY && p.t <= t); return v.length ? mean(v) : null; };
 
 // Alle Kennzahlen aus echten Messwerten, Wochen von Montag bis Sonntag.
 // Wochenwert = letzte Messung der Woche minus letzte Messung der Woche davor
@@ -339,6 +348,31 @@ function weeks() {
   return out;
 }
 
+// Ø Abnahme pro Woche je Kalendermonat, gerechnet wie die Kachel „Pro Woche“:
+// 7-Tage-Schnitt am Monatsende minus 7-Tage-Schnitt am Ende des Vormonats (erster Monat: ab erster Messung),
+// umgerechnet auf 7 Tage. Laufender Monat bis zur letzten Messung. Weniger als 7 Tage: zählt zum Folgemonat.
+function months() {
+  const last = pts[pts.length - 1].t;
+  const out = [];
+  let ref = { t: pts[0].t, w: pts[0].w };
+  const d0 = new Date(pts[0].t);
+  for (let m = d0.getUTCMonth(); ; m++) {
+    const anfang = Date.UTC(d0.getUTCFullYear(), m, 1);
+    const ende = Date.UTC(d0.getUTCFullYear(), m + 1, 1) - DAY; // letzter Tag des Monats
+    const laufend = ende >= last;
+    const t = laufend ? last : ende;
+    const w = avg7(t);
+    const tage = (t - ref.t) / DAY;
+    if (w != null && tage >= 7) {
+      const abn = ref.w - w; // positiv = abgenommen
+      out.push({ key: anfang, label: fMon.format(new Date(anfang)), v: -(abn / tage) * 7, kcal: Math.round((abn * 7700) / tage / 10) * 10, laufend });
+      ref = { t, w };
+    }
+    if (laufend) break;
+  }
+  return out.slice(-12);
+}
+
 function summary() {
   const wk = weeks();
   const done = wk.filter((r) => !r.laufend);
@@ -346,7 +380,6 @@ function summary() {
 
   // „Pro Woche“ und „kcal/Tag“: 7-Tage-Schnitt am Ende der letzten abgeschlossenen Woche (Sonntag)
   // minus 7-Tage-Schnitt 4 Wochen davor. Gleicht Tagesschwankungen durch Wasser usw. aus.
-  const avg7 = (t) => { const v = pts.filter((p) => p.t > t - 7 * DAY && p.t <= t); return v.length ? mean(v) : null; };
   let proWoche = null, kcal4 = null, anzahl = 0;
   if (done.length) {
     const end = done[done.length - 1].bis.getTime();          // letzter abgeschlossener Sonntag
@@ -543,15 +576,13 @@ function drawChart(ziel) {
   hideTips.push(() => { hover.style('display', 'none'); tip.hidden = true; });
 }
 
-/* ---------- Wochenabnahme als Säulen ---------- */
-function drawWeekBars(all) {
-  const box = $('chart-wochen');
+/* ---------- Säulen (Wochen bzw. Monate) ---------- */
+// rows: { key, label(i, schmal), v = Veränderung in kg (Abnahme negativ), kcal (positiv = Defizit, null = offen), laufend }
+function drawBars(box, rows, titel) {
   box.replaceChildren();
-  if (!all.length) return;
+  if (!rows.length) return;
   const W = Math.max(280, box.clientWidth);
-  // Die letzten 8 Wochen (neueste rechts)
-  const rows = all.slice(-8);
-  const v = (r) => -r.abn; // Veränderung in kg: Abnahme nach unten, Zunahme nach oben
+  const v = (r) => r.v; // Abnahme nach unten, Zunahme nach oben
   const vmin = Math.min(0, d3.min(rows, v)), vmax = Math.max(0, d3.max(rows, v));
   const plotH = W < 520 ? 150 : 190;
   const top = vmax > 0 ? 24 : 8;                 // Platz für „+0,20“ über einer Zunahme
@@ -559,10 +590,10 @@ function drawWeekBars(all) {
   const yLab = top + plotH + 38;                 // KW-Beschriftung (unter den Werten der tiefsten Säule)
   const ySep = yLab + 16, yCap = ySep + 26, yKcal = yCap + 24, H = yKcal + 8;
   box.style.minHeight = H + 'px';
-  const x = d3.scaleBand(rows.map((r) => r.kw), [0, W]).paddingInner(0.3).paddingOuter(0.08);
+  const x = d3.scaleBand(rows.map((r) => r.key), [0, W]).paddingInner(0.3).paddingOuter(0.08);
   const bw = Math.min(48, x.bandwidth());
-  const cx = (r) => x(r.kw) + x.bandwidth() / 2;
-  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche');
+  const cx = (r) => x(r.key) + x.bandwidth() / 2;
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', titel);
   // Am schmalen Handy etwas kleinere Zahlen, damit sich Nachbarn nicht berühren
   const fs = x.step() < 48 ? { bl: '10.5px', kcal: '11px', tick: '11px' } : { bl: '12px', kcal: '13px', tick: '12px' };
 
@@ -589,7 +620,7 @@ function drawWeekBars(all) {
     .text((r) => sign(v(r)) + nf(2).format(Math.abs(v(r))));
 
   svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').style('font-size', fs.tick).attr('text-anchor', 'middle')
-    .attr('x', cx).attr('y', yLab).text((r, i) => (x.step() < 48 && i > 0 ? '' : 'KW ') + r.kw);
+    .attr('x', cx).attr('y', yLab).text((r, i) => r.label(i, x.step() < 48));
 
   // Darunter: Defizit bzw. Überschuss pro Tag
   svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', ySep).attr('y2', ySep).style('stroke', 'var(--line)');
@@ -597,7 +628,7 @@ function drawWeekBars(all) {
   svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'kcalv').style('font-size', fs.kcal).attr('text-anchor', 'middle')
     .attr('x', cx).attr('y', yKcal)
     .style('fill', (r) => (r.laufend ? 'var(--muted)' : r.kcal < 0 ? 'var(--warn)' : 'var(--fg)'))
-    .text((r) => (r.laufend ? 'offen' : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal))));
+    .text((r) => (r.kcal == null ? 'offen' : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal))));
 }
 
 function render() {
@@ -607,7 +638,11 @@ function render() {
   drawTop(s);
   drawWeeks(weeks());
   drawChart(s.ziel);
-  drawWeekBars(weeks());
+  // Die letzten 8 Wochen (neueste rechts)
+  drawBars($('chart-wochen'), weeks().slice(-8).map((r) => ({
+    key: r.kw, label: (i, schmal) => (schmal && i > 0 ? '' : 'KW ') + r.kw, v: -r.abn, kcal: r.laufend ? null : r.kcal, laufend: r.laufend,
+  })), 'Abnahme pro Woche');
+  drawBars($('chart-monate'), months().map((r) => ({ ...r, label: () => r.label })), 'Ø Abnahme pro Woche je Monat');
 }
 window.addEventListener('resize', () => {
   if (!pts.length || window.innerWidth === lastW) return;
