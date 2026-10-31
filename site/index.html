@@ -140,18 +140,17 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .bar.pos { border-radius: 0 3px 3px 0; }
 .bar.neg { border-radius: 3px 0 0 3px; }
 .bar.flush { border-radius: 3px; }
-.wval { align-items: flex-end; padding-left: 1rem; font-weight: 800; font-size: 1.375rem; letter-spacing: -0.01em; white-space: nowrap; }
+.wval { align-items: flex-end; padding-left: 1rem; color: var(--good-ink); font-weight: 800; font-size: 1.375rem; letter-spacing: -0.01em; white-space: nowrap; }
 .wval { flex-direction: row !important; align-items: baseline !important; justify-content: flex-end; }
 .wval .unit { font-weight: 500; font-size: 0.8em; white-space: pre; }
 .kcal { align-items: flex-end; padding-left: 1rem; font-size: 0.8125rem; font-weight: 600; color: var(--muted); white-space: nowrap; min-width: 5.5rem; }
-.week.up .kcal, .week.up .wk b, .week.up .wk span { color: var(--warn); }
+.week.up .kcal { color: var(--warn); }
 .card-head .note.kcalhead { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
 .week.now .kcal { color: var(--muted); }
 .card-head .note.energy { color: var(--energy); font-weight: 600; }
 .week.up .bar { background: var(--warn); }
 .week.up .wval { color: var(--warn); }
 .week.now .bar { background: color-mix(in srgb, var(--good) 14%, var(--panel)); border: 1.5px dashed var(--good); box-sizing: border-box; }
-.week.now .wval, .week.now .wk b { color: var(--muted); }
 /* Laufende Woche grau hinterlegt (noch nicht abgeschlossen) */
 .week.now > * { background: var(--grid); border-top-color: transparent; }
 .week.now > .wk { box-shadow: -0.6rem 0 0 var(--grid); border-radius: 8px 0 0 8px; }
@@ -160,7 +159,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .week.now + .week > * { border-top-color: transparent; }
 /* Laufende Woche mit Zunahme: rot gestrichelt */
 .week.up.now .bar { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border-color: var(--warn); }
-.week.up.now .wval, .week.up.now .wk b, .week.up.now .kcal { color: var(--warn); }
+.week.up.now .wval, .week.up.now .kcal { color: var(--warn); }
 .more { align-self: flex-start; background: none; border: 0; padding: 0.25rem 0; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--accent); cursor: pointer; }
 .more:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 @media (max-width: 520px) {
