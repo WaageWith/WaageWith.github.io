@@ -516,7 +516,7 @@ function wochentage(ab) {
   const rows = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((l, i) => {
     const a = g[i], v = a.length ? avg(a) : 0;
     const ci = a.length > 1 ? (t95(a.length - 1) * sd(a)) / Math.sqrt(a.length) : null;
-    return { key: l, label: () => l, v, ci, kcal: Math.round((-v * 7700) / 10) * 10, laufend: false };
+    return { key: l, label: () => l, v, ci, n: a.length, kcal: Math.round((-v * 7700) / 10) * 10, laufend: false };
   });
   const used = g.filter((a) => a.length), all = used.flat(), N = all.length, k = used.length;
   let p = null;
@@ -657,7 +657,7 @@ function drawChart(ziel) {
 
 /* ---------- Säulen (Wochen bzw. Monate) ---------- */
 // rows: { key, label(i, schmal), v = Veränderung in kg (Abnahme negativ), kcal (positiv = Defizit, null = offen), laufend }
-function drawBars(box, rows, titel, extra) {
+function drawBars(box, rows, titel, extras = []) {
   box.replaceChildren();
   if (!rows.length) return;
   const W = Math.max(280, box.clientWidth);
@@ -671,7 +671,7 @@ function drawBars(box, rows, titel, extra) {
   const top = vmax > 0 ? 24 : 8;                 // Platz für „+0,20“ über einer Zunahme
   const y = d3.scaleLinear([vmin, vmax === vmin ? vmin + 1 : vmax], [top + plotH, top]);
   const yLab = top + plotH + 38;                 // KW-Beschriftung (unter den Werten der tiefsten Säule)
-  const ySep = yLab + 16, yCap = ySep + 26, yKcal = yCap + 24, yCap2 = yKcal + 30, yExtra = yCap2 + 24, H = (extra ? yExtra : yKcal) + 8;
+  const ySep = yLab + 16, yCap = ySep + 26, yKcal = yCap + 24, H = yKcal + extras.length * 54 + 8;
   box.style.minHeight = H + 'px';
   const x = d3.scaleBand(rows.map((r) => r.key), [0, W]).paddingInner(0.3).paddingOuter(0.25);
   const bw = Math.min(48, x.bandwidth());
@@ -730,11 +730,13 @@ function drawBars(box, rows, titel, extra) {
     .attr('x', cx).attr('y', yKcal)
     .style('fill', (r) => (r.laufend ? 'var(--muted)' : r.kcal < 0 ? 'var(--warn)' : 'var(--fg)'))
     .text((r) => (r.kcal == null ? 'offen' : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal))));
-  // Optional eine weitere Zeile darunter (z. B. Unsicherheit)
-  if (!extra) return;
-  svg.append('text').attr('class', 'kcalcap').attr('x', 0).attr('y', yCap2).text(extra.cap);
-  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'kcalv').style('font-size', fs.kcal).attr('text-anchor', 'middle')
-    .attr('x', cx).attr('y', yExtra).style('fill', 'var(--muted)').text(extra.text);
+  // Optional weitere Zeilen darunter (z. B. Unsicherheit, Anzahl)
+  extras.forEach((e, k) => {
+    const yc = yKcal + 30 + k * 54;
+    svg.append('text').attr('class', 'kcalcap').attr('x', 0).attr('y', yc).text(e.cap);
+    svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'kcalv').style('font-size', fs.kcal).attr('text-anchor', 'middle')
+      .attr('x', cx).attr('y', yc + 24).style('fill', 'var(--muted)').text(e.text);
+  });
 }
 
 function render() {
@@ -753,7 +755,8 @@ function render() {
   Object.assign($('wtage-ab'), { min: iso(pts[0].t), max: iso(pts[pts.length - 1].t), value: iso(wtAb) });
   const wt = wochentage(wtAb);
   drawBars($('chart-wtage'), wt.rows, 'Ø Veränderung nach Wochentag',
-    { cap: 'UNSICHERHEIT (95 %), G', text: (r) => (r.ci == null ? '–' : '±' + g(r.ci)) });
+    [{ cap: 'UNSICHERHEIT (95 %), G', text: (r) => (r.ci == null ? '–' : '±' + g(r.ci)) },
+     { cap: 'ANZAHL MESSUNGEN', text: (r) => String(r.n) }]);
   const stufe = wt.p == null ? null : wt.p < 0.05 ? 'hoch – Unterschiede wahrscheinlich echt' : wt.p < 0.1 ? 'mittel – noch unsicher' : 'gering – Unterschiede können Zufall sein';
   $('wtage-p').textContent = stufe ? `Aussagekraft: ${stufe} (p = ${nf(2).format(wt.p)}, ${wt.N} Tage)` : 'Aussagekraft: zu wenige Messungen';
 }
