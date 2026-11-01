@@ -853,7 +853,6 @@ async function load(password) {
   const file = await res.json();
   const data = await decrypt(file, password);
   lastLoad = Date.now();
-  aufrufeSenden(password);
   cfg = data.einstellungen || {};
   const startAb = cfg.start_datum ? Date.parse(cfg.start_datum + 'T00:00:00Z') : -Infinity;
   pts = (data.messungen || [])
@@ -865,12 +864,19 @@ async function load(password) {
   render();
 }
 async function boot() {
+  const neu = neuerAufruf;
+  neuerAufruf = false;
   const pw = store.get();
-  if (!pw) { show('lock'); return; }
-  try { await load(pw); }
+  if (!pw) { show('lock'); if (neu) aufrufMerken('ohne Passwort'); return; }
+  try { await load(pw); if (neu) aufrufMerken('Passwort gespeichert'); }
   catch (e) {
-    if (e && e.message === 'offline') { if (!pts.length) { $('loading').textContent = 'Keine Verbindung. Bitte später erneut öffnen.'; } return; }
+    if (e && e.message === 'offline') {
+      if (neu) aufrufMerken('Passwort gespeichert');
+      if (!pts.length) { $('loading').textContent = 'Keine Verbindung. Bitte später erneut öffnen.'; }
+      return;
+    }
     store.clear(); show('lock');
+    if (neu) aufrufMerken('ohne Passwort');
   }
 }
 $('lock-form').addEventListener('submit', async (ev) => {
@@ -878,16 +884,21 @@ $('lock-form').addEventListener('submit', async (ev) => {
   const pw = $('pw').value;
   $('pw-err').hidden = true;
   $('pw-btn').disabled = true;
-  try { await load(pw); store.set(pw); }
-  catch (e) { $('pw-err').textContent = e && e.message === 'offline' ? 'Keine Verbindung zum Internet.' : 'Das Passwort stimmt nicht.'; $('pw-err').hidden = false; }
+  try { await load(pw); store.set(pw); aufrufMerken('Passwort eingegeben'); }
+  catch (e) {
+    const offline = e && e.message === 'offline';
+    $('pw-err').textContent = offline ? 'Keine Verbindung zum Internet.' : 'Das Passwort stimmt nicht.'; $('pw-err').hidden = false;
+    if (!offline) aufrufMerken('Passwort falsch');
+  }
   finally { $('pw-btn').disabled = false; }
 });
 
 /* ---------- Aufrufe erfassen ---------- */
-// Jedes Öffnen (Browser oder installierte App, auch Zurückkehren nach ≥ 5 Min.) wird gemerkt und nach dem
-// Entsperren mit dem Passwort verschlüsselt an ntfy.sh geschickt. Der Minix holt die Einträge ab
-// (Withings Minix\aufrufe_sammeln.py). Ohne Verbindung bleiben sie gespeichert und gehen später raus.
+// Jedes Öffnen (Browser oder installierte App, auch Zurückkehren nach ≥ 5 Min.) und jede Passworteingabe wird
+// mit dem öffentlichen Schlüssel des Minix verschlüsselt an ntfy.sh geschickt – auch ohne Passwort. Nur der Minix
+// kann es lesen (Withings Minix\aufrufe_sammeln.py). Ohne Verbindung bleiben Einträge gespeichert und gehen später raus.
 const AUFRUF_URL = 'https://ntfy.sh/waagewith-w0xnkxio5plmomf119eb';
+const MINIX_KEY = 'BAepU8AOEr89mN+gPAhSP3QyZqBNNjMS3CPXrZcqadwIfwLX0Zu7XyAKCmyCQWzA8HkJ5od7lopHiTmLW6Z9h4s=';
 const aufrufe = {
   get() { try { return JSON.parse(localStorage.getItem('waage-aufrufe') || '[]'); } catch (e) { return []; } },
   set(v) { try { localStorage.setItem('waage-aufrufe', JSON.stringify(v.slice(-50))); } catch (e) {} },
@@ -910,39 +921,43 @@ async function geraet() {
     : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
   return { system, modell, browser };
 }
-async function aufrufMerken() {
+async function aufrufMerken(zugang) {
   const app = navigator.standalone === true || ['standalone', 'fullscreen', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches);
-  const eintrag = { t: new Date().toISOString(), id: geraeteId(), art: app ? 'App' : 'Browser', ...await geraet() };
+  const eintrag = { t: new Date().toISOString(), id: geraeteId(), art: app ? 'App' : 'Browser', zugang, ...await geraet() };
   aufrufe.set([...aufrufe.get(), eintrag]);
+  aufrufeSenden();
 }
-let logKey = null, sendet = false;
-async function verschluesseln(obj, password) {
-  if (!logKey || logKey.pw !== password) {
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    logKey = { pw: password, salt, key: await deriveKey(password, salt, 310000, 'encrypt') };
-  }
+// Einmal-Schlüsselpaar je Eintrag + ECDH mit dem Minix-Schlüssel → HKDF → AES-GCM
+async function verschluesseln(obj) {
+  const minix = await crypto.subtle.importKey('raw', b64(MINIX_KEY), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const eph = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const geheim = await crypto.subtle.deriveBits({ name: 'ECDH', public: minix }, eph.privateKey, 256);
+  const hkdf = await crypto.subtle.importKey('raw', geheim, 'HKDF', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode('waage-aufruf') },
+    hkdf, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, logKey.key, new TextEncoder().encode(JSON.stringify(obj)));
-  return { v: 1, iter: 310000, salt: tob64(logKey.salt), iv: tob64(iv), ct: tob64(new Uint8Array(ct)) };
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
+  const pub = new Uint8Array(await crypto.subtle.exportKey('raw', eph.publicKey));
+  return { v: 2, k: tob64(pub), iv: tob64(iv), ct: tob64(new Uint8Array(ct)) };
 }
-async function aufrufeSenden(password) {
+let sendet = false;
+async function aufrufeSenden() {
   if (sendet) return;
   sendet = true;
   try {
-    await merken;
     while (aufrufe.get().length) {
-      const res = await fetch(AUFRUF_URL, { method: 'POST', body: JSON.stringify(await verschluesseln(aufrufe.get()[0], password)) });
+      const res = await fetch(AUFRUF_URL, { method: 'POST', body: JSON.stringify(await verschluesseln(aufrufe.get()[0])) });
       if (!res.ok) break;
       aufrufe.set(aufrufe.get().slice(1));
     }
   } catch (e) {} finally { sendet = false; }
 }
-let merken = aufrufMerken(), verstecktSeit = 0;
+let neuerAufruf = true, verstecktSeit = 0;
 
 // Beim Zurückkehren in die App neue Messungen holen
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { verstecktSeit = Date.now(); return; }
-  if (verstecktSeit && Date.now() - verstecktSeit >= 5 * 60000) merken = aufrufMerken();
+  if (verstecktSeit && Date.now() - verstecktSeit >= 5 * 60000) neuerAufruf = true;
   if (Date.now() - lastLoad > 60000) boot();
 });
 document.fonts?.ready.then(() => { if (pts.length) render(); });
