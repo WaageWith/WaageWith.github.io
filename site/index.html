@@ -391,8 +391,10 @@ function summary() {
       kcal4 = -Math.round(((wStart - wEnd) * 7700) / tage / 10) * 10;
     }
   }
+  // Startgewicht aus den Einstellungen (vor der ersten Messung) gilt nur für „Abgenommen“, nicht für Diagramme
+  const start = cfg.start_gewicht_kg && cfg.start_datum ? { t: Date.parse(cfg.start_datum + 'T00:00:00Z'), w: cfg.start_gewicht_kg } : pts[0];
   return {
-    start: pts[0], last: pts[pts.length - 1].t, lastW: pts[pts.length - 1].w,
+    start, last: pts[pts.length - 1].t, lastW: pts[pts.length - 1].w,
     proWoche,
     anzahlWochen: anzahl,
     kcal4,
