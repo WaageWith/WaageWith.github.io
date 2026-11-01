@@ -661,7 +661,9 @@ function drawBars(box, rows, titel, extra) {
   // Mit 95-%-Bereich (r.ci, kg) reicht die Skala bis zu dessen Enden
   const lo = (r) => (r.ci == null ? v(r) : v(r) - r.ci), hi = (r) => (r.ci == null ? v(r) : v(r) + r.ci);
   const vmin = Math.min(0, d3.min(rows, lo)), vmax = Math.max(0, d3.max(rows, hi));
-  const plotH = W < 520 ? 150 : 190;
+  // Mit 95-%-Bereich wird das Diagramm höher, damit die Säulen so hoch bleiben wie ohne
+  const barSpan = Math.max(0, d3.max(rows, v)) - Math.min(0, d3.min(rows, v));
+  const plotH = (W < 520 ? 150 : 190) * (barSpan > 0 ? Math.min(4, (vmax - vmin) / barSpan) : 1);
   const top = vmax > 0 ? 24 : 8;                 // Platz für „+0,20“ über einer Zunahme
   const y = d3.scaleLinear([vmin, vmax === vmin ? vmin + 1 : vmax], [top + plotH, top]);
   const yLab = top + plotH + 38;                 // KW-Beschriftung (unter den Werten der tiefsten Säule)
@@ -695,11 +697,12 @@ function drawBars(box, rows, titel, extra) {
   for (const f of [lo, hi]) ciG.append('g').selectAll('line').data(ciRows).join('line')
     .attr('x1', (r) => cx(r) - cap).attr('x2', (r) => cx(r) + cap).attr('y1', (r) => y(f(r))).attr('y2', (r) => y(f(r)));
 
-  // Werte an den Säulenenden (bzw. hinter dem 95-%-Bereich), immer mit Vorzeichen
+  // Werte an den Säulenenden, immer mit Vorzeichen
   const sign = (x) => (x > 0 ? '+' : x < 0 ? '−' : '±');
   svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'bl').style('font-size', fs.bl).attr('text-anchor', 'middle')
     .attr('x', cx)
-    .attr('y', (r) => (v(r) > 0 ? y(hi(r)) - 7 : Math.max(y(0), y(lo(r))) + 16))
+    .attr('y', (r) => (v(r) > 0 ? y(v(r)) - 7 : Math.max(y(0), y(v(r))) + 16))
+    .style('paint-order', 'stroke').style('stroke', 'var(--panel)').attr('stroke-width', 4).attr('stroke-linejoin', 'round') // freigestellt vor dem 95-%-Strich
     .style('fill', (r) => (v(r) > 0 ? 'var(--warn)' : 'var(--fg)'))
     .text((r) => sign(v(r)) + g(Math.abs(v(r))) + ' g');
 
