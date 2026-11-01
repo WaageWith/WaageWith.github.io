@@ -379,7 +379,7 @@ function weeks() {
   return out;
 }
 
-// Ø Abnahme pro Woche je Kalendermonat, gerechnet wie die Kachel „Pro Woche“:
+// Ø Abnahme pro Woche je Kalendermonat:
 // 7-Tage-Schnitt am Monatsende minus 7-Tage-Schnitt am Ende des Vormonats (erster Monat: ab erster Messung),
 // umgerechnet auf 7 Tage. Laufender Monat bis zur letzten Messung. Weniger als 7 Tage: zählt zum Folgemonat.
 function months() {
@@ -406,24 +406,21 @@ function months() {
 
 function summary() {
   const wk = weeks();
-  const done = wk.filter((r) => !r.laufend);
   const cur = wk.length && wk[wk.length - 1].laufend ? wk[wk.length - 1] : null;
 
-  // „Pro Woche“ und „kcal/Tag“: 7-Tage-Schnitt am Ende der letzten abgeschlossenen Woche (Sonntag)
-  // minus 7-Tage-Schnitt 4 Wochen davor. Gleicht Tagesschwankungen durch Wasser usw. aus.
+  // „Pro Woche“ und „kcal/Tag“: Trendlinie (lineare Regression) durch alle Messungen der letzten 28 Tage
+  // bis zur letzten Messung, täglich neu. Gleicht Tagesschwankungen durch Wasser usw. aus.
   let proWoche = null, kcal4 = null, anzahl = 0;
-  if (done.length) {
-    const end = done[done.length - 1].bis.getTime();          // letzter abgeschlossener Sonntag
-    anzahl = Math.min(4, done.length);
-    let start = end - anzahl * 7 * DAY;
-    let wStart = avg7(start);
-    if (wStart == null) { start = pts[0].t; wStart = pts[0].w; } // noch nicht genug Vorlauf: ab erster Messung
-    const wEnd = avg7(end);
-    const tage = Math.max(1, (end - start) / DAY);
-    if (wEnd != null) {
-      proWoche = ((wStart - wEnd) / tage) * 7;                  // positiv = abgenommen
-      kcal4 = -Math.round(((wStart - wEnd) * 7700) / tage / 10) * 10;
-    }
+  const lastT = pts[pts.length - 1].t;
+  const fenster = pts.filter((p) => p.t > lastT - 28 * DAY);
+  const spanne = (lastT - fenster[0].t) / DAY;
+  if (fenster.length >= 3 && spanne >= 6) {
+    const mt = fenster.reduce((s, p) => s + p.t, 0) / fenster.length, mw = mean(fenster);
+    const steigung = fenster.reduce((s, p) => s + (p.t - mt) * (p.w - mw), 0)
+      / fenster.reduce((s, p) => s + (p.t - mt) ** 2, 0) * DAY; // kg pro Tag, negativ = abgenommen
+    proWoche = -steigung * 7;                                    // positiv = abgenommen
+    kcal4 = Math.round((steigung * 7700) / 10) * 10;
+    anzahl = Math.min(4, Math.round((spanne + 1) / 7));
   }
   // Startgewicht aus den Einstellungen (vor der ersten Messung) gilt nur für „Abgenommen“, nicht für Diagramme
   const start = cfg.start_gewicht_kg && cfg.start_datum ? { t: Date.parse(cfg.start_datum + 'T00:00:00Z'), w: cfg.start_gewicht_kg } : pts[0];
