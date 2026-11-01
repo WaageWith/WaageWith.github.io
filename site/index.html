@@ -276,7 +276,7 @@ html { -webkit-text-size-adjust: 100%; }
     </div>
     <div class="seg" id="range" role="group" aria-label="Zeitraum">
       <button type="button" data-days="0">Alles</button>
-      <button type="button" data-days="91">3 Monate</button>
+      <button type="button" data-days="61">2 Monate</button>
       <button type="button" data-days="30">30 Tage</button>
       <button type="button" data-days="14">14 Tage</button>
     </div>
@@ -506,6 +506,7 @@ document.addEventListener('pointerdown', (ev) => {
 // Zeitraum der Gewichtskurve (wird pro Gerät gemerkt)
 let rangeDays = 0;
 try { rangeDays = Number(localStorage.getItem('waage-range') || 0); } catch (e) {}
+if (rangeDays === 91) rangeDays = 61; // frühere Auswahl „3 Monate“ → jetzt „2 Monate“
 function syncRange() { document.querySelectorAll('#range button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.days) === rangeDays))); }
 syncRange();
 $('range').addEventListener('click', (ev) => {
