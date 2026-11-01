@@ -161,7 +161,17 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .more { align-self: flex-start; background: none; border: 0; padding: 0.25rem 0; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--accent); cursor: pointer; }
 .more:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 /* Wochentage nur am PC (zu wenige Werte, um am Handy Platz zu verdienen) */
-@media (max-width: 767px) { #wtage { display: none; } }
+@media (max-width: 767px) { #wtage, #kalender { display: none; } }
+/* Kalender der Wiegetage (nur PC) */
+.kal { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 1.25rem 1.75rem; }
+.kal h3 { margin: 0 0 0.5rem; font-size: 0.9375rem; font-weight: 600; }
+.kal-g { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.kal-g span { aspect-ratio: 1; display: grid; place-items: center; border-radius: 4px; font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.kal-g .wd { aspect-ratio: auto; color: var(--muted); padding-bottom: 0.15rem; }
+.kal-g .kal-ja { background: var(--accent); color: #fff; font-weight: 600; }
+.kal-g .kal-nein { background: var(--grid); color: var(--muted); }
+.legend .l-sq.kal-ja { background: var(--accent); }
+.legend .l-sq.kal-nein { background: var(--grid); }
 @media (max-width: 520px) {
   .wrap { padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
   .card { padding: 1rem 1rem 0.75rem; }
@@ -309,6 +319,13 @@ html { -webkit-text-size-adjust: 100%; }
       <div class="legend"><span>Tag = morgens gewogen bis nächsten Morgen</span><span><i class="l-ci"></i>95-%-Bereich</span><span id="wtage-p"></span></div>
     </div>
     <div class="chart" id="chart-wtage"></div>
+  </section>
+
+  <section class="panel card" id="kalender">
+    <div class="card-head barhead"><h2>Wiegetage</h2>
+      <div class="legend"><span><i class="l-sq kal-ja"></i>gewogen</span><span><i class="l-sq kal-nein"></i>nicht gewogen</span><span id="kal-anzahl"></span></div>
+    </div>
+    <div class="kal" id="kal"></div>
   </section>
 
 </div>
@@ -759,6 +776,35 @@ function render() {
      { cap: 'ANZAHL MESSUNGEN', text: (r) => String(r.n) }]);
   const stufe = wt.p == null ? null : wt.p < 0.05 ? 'hoch – Unterschiede wahrscheinlich echt' : wt.p < 0.1 ? 'mittel – noch unsicher' : 'gering – Unterschiede können Zufall sein';
   $('wtage-p').textContent = stufe ? `Aussagekraft: ${stufe} (p = ${nf(2).format(wt.p)}, ${wt.N} Tage)` : 'Aussagekraft: zu wenige Messungen';
+  drawKalender();
+}
+// Kalender ab August 2026 bis heute: gewogen (blau) / nicht gewogen (grau), Tage danach leer
+const KALENDER_AB = Date.UTC(2026, 7, 1);
+function drawKalender() {
+  const jetzt = new Date(), heute = Date.UTC(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate());
+  const gew = new Map(pts.filter((p) => p.t >= KALENDER_AB).map((p) => [p.t, p]));
+  const fMonat = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const fTag = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+  const monate = [];
+  let ja = 0, alle = 0;
+  for (let m = new Date(KALENDER_AB); m.getTime() <= heute; m = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))) {
+    const grid = el('div', 'kal-g');
+    ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].forEach((w) => grid.append(el('span', 'wd', w)));
+    for (let i = (m.getUTCDay() + 6) % 7; i > 0; i--) grid.append(el('span'));
+    for (let t = m.getTime(); new Date(t).getUTCMonth() === m.getUTCMonth(); t += DAY) {
+      const p = gew.get(t), tag = el('span', t > heute ? null : p ? 'kal-ja' : 'kal-nein', String(new Date(t).getUTCDate()));
+      if (t <= heute) {
+        alle++; if (p) ja++;
+        tag.title = fTag.format(new Date(t)) + (p ? `: ${kg1(p.w)} kg${p.zeit ? ', ' + p.zeit + ' Uhr' : ''}` : ': nicht gewogen');
+      }
+      grid.append(tag);
+    }
+    const box = el('div');
+    box.append(el('h3', null, fMonat.format(m)), grid);
+    monate.push(box);
+  }
+  $('kal').replaceChildren(...monate);
+  $('kal-anzahl').textContent = `${ja} von ${alle} Tagen gewogen`;
 }
 // Wochentage: Starttag wählbar, jedes Gerät merkt sich seine Wahl (leer = zurück auf WOCHEN_AB)
 let wtAb = WOCHEN_AB;
