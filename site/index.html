@@ -87,18 +87,18 @@ h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.75rem;
   .kpis { gap: 0.3rem; }
   .kpis .kpi { padding: 0.5rem 0.6rem; grid-template-areas: "lbl" "val" "sub"; grid-template-columns: minmax(0, 1fr); }
   .kpis .kpi .ico { display: none; }
-  .kpis .kpi .lbl { font-size: 0.625rem; letter-spacing: 0.06em; }
+  .kpis .kpi .lbl { font-size: 0.8125rem; letter-spacing: 0.06em; }
   .kpis .kpi .kval { font-size: clamp(1.3rem, 6.2vw, 2.4rem); }
-  .kpis .kpi .sub { font-size: 0.6875rem; line-height: 1.3; }
+  .kpis .kpi .sub { font-size: 0.8125rem; line-height: 1.3; }
   .kpis .kpi .kval small { margin-left: 0.25em; }
   .kpis.two .kpi { padding: 0.55rem 0.9rem; }
   .kpis.two .kpi .kval { font-size: clamp(1.8rem, 9vw, 2.6rem); }
-  .kpis.two .kpi .lbl { font-size: 0.6875rem; }
-  .kpis.two .kpi .sub { font-size: 0.75rem; }
+  .kpis.two .kpi .lbl { font-size: 0.8125rem; }
+  .kpis.two .kpi .sub { font-size: 0.8125rem; }
 }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
 .kpi { padding: 0.7rem 1.25rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "lbl ico" "val val" "sub sub"; row-gap: 0.2rem; align-items: center; }
-.kpi .lbl { grid-area: lbl; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.kpi .lbl { grid-area: lbl; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .kpi .ico { grid-area: ico; width: 1.75rem; height: 1.75rem; border-radius: 50%; display: grid; place-items: center; font-size: 0.9rem; font-weight: 700; color: var(--muted); background: color-mix(in srgb, var(--fg) 6%, transparent); }
 .kpi.good .ico { color: var(--good-ink); background: color-mix(in srgb, var(--good) 13%, transparent); }
 .kpi.bad .ico { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
@@ -131,7 +131,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .week:first-child > * { border-top: 0; }
 .wk { padding-right: 1rem; line-height: 1.25; }
 .wk b { display: block; font-weight: 600; font-size: 0.9375rem; }
-.wk span { display: block; font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+.wk span { display: block; font-size: 0.8125rem; color: var(--muted); white-space: nowrap; }
 .track { position: relative; height: 22px; border-radius: 4px; background: var(--grid); }
 .track .zero { position: absolute; top: -3px; bottom: -3px; width: 1.5px; margin-left: -0.75px; background: var(--mark); border-radius: 1px; }
 .trackcell .track { width: 100%; }
@@ -164,7 +164,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
   .card { padding: 1rem 1rem 0.75rem; }
   .wk { padding-right: 0.75rem; }
   .wval { padding-left: 0.75rem; font-size: 1.1875rem; }
-  .kcal { padding-left: 0.6rem; min-width: 0; font-size: 0.75rem; }
+  .kcal { padding-left: 0.6rem; min-width: 0; font-size: 0.8125rem; }
   .kpi { padding: 0.5rem 0.75rem; }
   .kpis { gap: 0.5rem; }
 }
@@ -172,13 +172,13 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 /* Kurve */
 .chart { position: relative; }
 .seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 10px; background: var(--grid); }
-.seg button { font: inherit; font-size: 0.8125rem; font-weight: 600; color: var(--muted); background: transparent; border: 0; border-radius: 8px; padding: 0.45rem 0.25rem; cursor: pointer; white-space: nowrap; }
+.seg button { font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--muted); background: transparent; border: 0; border-radius: 8px; padding: 0.45rem 0.25rem; cursor: pointer; white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12); }
 .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .chart svg { display: block; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.tick { fill: var(--muted); font-size: 12px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
-.endlabel { fill: var(--fg); font-size: 13px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
-.legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); }
+.tick { fill: var(--muted); font-size: 13px; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.endlabel { fill: var(--fg); font-size: 14px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8125rem; color: var(--muted); }
 .legend i { display: inline-block; vertical-align: middle; margin-right: 0.35rem; }
 .legend .l-line { width: 14px; height: 2px; background: var(--accent); border-radius: 1px; }
 .legend .l-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mark); }
@@ -187,12 +187,12 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .legend .l-sq.now { background: color-mix(in srgb, var(--good) 12%, transparent); border: 1.5px dashed var(--good); box-sizing: border-box; width: 11px; height: 11px; }
 .card-head.barhead { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
 .bl { font-size: 12px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
-.kcalcap { fill: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; font-family: var(--sans); }
+.kcalcap { fill: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: 0.08em; font-family: var(--sans); }
 .kcalv { font-size: 13px; font-weight: 600; font-family: var(--sans); font-variant-numeric: tabular-nums; }
-.barlabel { fill: var(--fg); font-size: 11px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.barlabel { fill: var(--fg); font-size: 13px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .legend .l-dash { width: 14px; height: 0; border-top: 2px dashed var(--accent); }
-.tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(16, 24, 40, 0.14); padding: 0.375rem 0.625rem; font-size: 0.8125rem; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
-.tip .d { color: var(--muted); font-size: 0.75rem; }
+.tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(16, 24, 40, 0.14); padding: 0.375rem 0.625rem; font-size: 0.875rem; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
+.tip .d { color: var(--muted); font-size: 0.8125rem; }
 
 details { font-size: 0.875rem; color: var(--muted); padding-inline: 0.25rem; }
 summary { cursor: pointer; font-weight: 600; color: var(--fg); padding-block: 0.25rem; }
@@ -594,12 +594,12 @@ function drawBars(box, rows, titel) {
   const yLab = top + plotH + 38;                 // KW-Beschriftung (unter den Werten der tiefsten Säule)
   const ySep = yLab + 16, yCap = ySep + 26, yKcal = yCap + 24, H = yKcal + 8;
   box.style.minHeight = H + 'px';
-  const x = d3.scaleBand(rows.map((r) => r.key), [0, W]).paddingInner(0.3).paddingOuter(0.08);
+  const x = d3.scaleBand(rows.map((r) => r.key), [0, W]).paddingInner(0.3).paddingOuter(0.25);
   const bw = Math.min(48, x.bandwidth());
   const cx = (r) => x(r.key) + x.bandwidth() / 2;
   const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', titel);
   // Am schmalen Handy etwas kleinere Zahlen, damit sich Nachbarn nicht berühren
-  const fs = x.step() < 48 ? { bl: '10.5px', kcal: '11px', tick: '11px' } : { bl: '12px', kcal: '13px', tick: '12px' };
+  const fs = x.step() < 48 ? { bl: '12px', kcal: '13px', tick: '13px' } : { bl: '13px', kcal: '14px', tick: '13px' };
 
   svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--line)').attr('stroke-width', 1.5);
 
