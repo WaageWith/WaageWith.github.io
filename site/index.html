@@ -824,11 +824,15 @@ let lastW = window.innerWidth, timer;
 
 /* ---------- Laden & Entschlüsseln ---------- */
 const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-async function decrypt(file, password) {
+const tob64 = (u) => btoa(String.fromCharCode(...u));
+async function deriveKey(password, salt, iter, usage) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
-  const key = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: b64(file.salt), iterations: file.iter },
-    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter },
+    base, { name: 'AES-GCM', length: 256 }, false, [usage]);
+}
+async function decrypt(file, password) {
+  const key = await deriveKey(password, b64(file.salt), file.iter, 'decrypt');
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(file.iv) }, key, b64(file.ct));
   return JSON.parse(new TextDecoder().decode(plain));
 }
@@ -849,6 +853,7 @@ async function load(password) {
   const file = await res.json();
   const data = await decrypt(file, password);
   lastLoad = Date.now();
+  aufrufeSenden(password);
   cfg = data.einstellungen || {};
   const startAb = cfg.start_datum ? Date.parse(cfg.start_datum + 'T00:00:00Z') : -Infinity;
   pts = (data.messungen || [])
@@ -877,9 +882,68 @@ $('lock-form').addEventListener('submit', async (ev) => {
   catch (e) { $('pw-err').textContent = e && e.message === 'offline' ? 'Keine Verbindung zum Internet.' : 'Das Passwort stimmt nicht.'; $('pw-err').hidden = false; }
   finally { $('pw-btn').disabled = false; }
 });
+
+/* ---------- Aufrufe erfassen ---------- */
+// Jedes Öffnen (Browser oder installierte App, auch Zurückkehren nach ≥ 5 Min.) wird gemerkt und nach dem
+// Entsperren mit dem Passwort verschlüsselt an ntfy.sh geschickt. Der Minix holt die Einträge ab
+// (Withings Minix\aufrufe_sammeln.py). Ohne Verbindung bleiben sie gespeichert und gehen später raus.
+const AUFRUF_URL = 'https://ntfy.sh/waagewith-w0xnkxio5plmomf119eb';
+const aufrufe = {
+  get() { try { return JSON.parse(localStorage.getItem('waage-aufrufe') || '[]'); } catch (e) { return []; } },
+  set(v) { try { localStorage.setItem('waage-aufrufe', JSON.stringify(v.slice(-50))); } catch (e) {} },
+};
+function geraeteId() {
+  try {
+    let id = localStorage.getItem('waage-geraet');
+    if (!id) { id = crypto.randomUUID().slice(0, 8); localStorage.setItem('waage-geraet', id); }
+    return id;
+  } catch (e) { return 'ohne-speicher'; }
+}
+async function geraet() {
+  const ua = navigator.userAgent, uad = navigator.userAgentData;
+  let system = uad?.platform || '', modell = '';
+  try { if (uad?.getHighEntropyValues) modell = (await uad.getHighEntropyValues(['model'])).model || ''; } catch (e) {}
+  if (!system) system = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android'
+    : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
+  if (!modell) { const m = ua.match(/Android [\d.]+; ([^;)]+)/); if (m && m[1] !== 'K') modell = m[1]; }
+  const browser = /Edg\//.test(ua) ? 'Edge' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Firefox\//.test(ua) ? 'Firefox'
+    : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  return { system, modell, browser };
+}
+async function aufrufMerken() {
+  const app = navigator.standalone === true || ['standalone', 'fullscreen', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches);
+  const eintrag = { t: new Date().toISOString(), id: geraeteId(), art: app ? 'App' : 'Browser', ...await geraet() };
+  aufrufe.set([...aufrufe.get(), eintrag]);
+}
+let logKey = null, sendet = false;
+async function verschluesseln(obj, password) {
+  if (!logKey || logKey.pw !== password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    logKey = { pw: password, salt, key: await deriveKey(password, salt, 310000, 'encrypt') };
+  }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, logKey.key, new TextEncoder().encode(JSON.stringify(obj)));
+  return { v: 1, iter: 310000, salt: tob64(logKey.salt), iv: tob64(iv), ct: tob64(new Uint8Array(ct)) };
+}
+async function aufrufeSenden(password) {
+  if (sendet) return;
+  sendet = true;
+  try {
+    await merken;
+    while (aufrufe.get().length) {
+      const res = await fetch(AUFRUF_URL, { method: 'POST', body: JSON.stringify(await verschluesseln(aufrufe.get()[0], password)) });
+      if (!res.ok) break;
+      aufrufe.set(aufrufe.get().slice(1));
+    }
+  } catch (e) {} finally { sendet = false; }
+}
+let merken = aufrufMerken(), verstecktSeit = 0;
+
 // Beim Zurückkehren in die App neue Messungen holen
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && Date.now() - lastLoad > 60000) boot();
+  if (document.visibilityState === 'hidden') { verstecktSeit = Date.now(); return; }
+  if (verstecktSeit && Date.now() - verstecktSeit >= 5 * 60000) merken = aufrufMerken();
+  if (Date.now() - lastLoad > 60000) boot();
 });
 document.fonts?.ready.then(() => { if (pts.length) render(); });
 $('themebtn').addEventListener('click', () => {
