@@ -467,7 +467,7 @@ function drawWeeks(rows) {
   const maxGain = Math.min(MAX, Math.max(0, d3.max(rows, (r) => -r.abn) || 0));
   const span = maxLoss + maxGain || 1;
   const zero = (maxGain / span) * 100;
-  const dm = (d) => `${d.getUTCDate()}.${d.getUTCMonth() + 1}.`;
+  const dm = (d) => `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.`;
   $('weeks').replaceChildren(...visible.map((r) => {
     const li = el('li', 'week' + (r.abn < 0 ? ' up' : '') + (r.laufend ? ' now' : ''));
     const wk = el('div', 'wk');
@@ -621,7 +621,7 @@ function drawBars(box, rows, titel) {
     .attr('x', cx)
     .attr('y', (r) => (v(r) > 0 ? y(v(r)) - 7 : Math.max(y(0), y(v(r))) + 16))
     .style('fill', (r) => (v(r) > 0 ? 'var(--warn)' : 'var(--fg)'))
-    .text((r) => sign(v(r)) + g(Math.abs(v(r))));
+    .text((r) => sign(v(r)) + g(Math.abs(v(r))) + ' g');
 
   svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').style('font-size', fs.tick).attr('text-anchor', 'middle')
     .attr('x', cx).attr('y', yLab).text((r, i) => r.label(i, x.step() < 48));
