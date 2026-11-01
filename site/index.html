@@ -689,6 +689,10 @@ function drawBars(box, rows, titel, extra) {
     if (v(r) > 0) { const t = y0 - hgt; return `M${x0},${y0}V${t + rad}Q${x0},${t} ${x0 + rad},${t}H${x0 + bw - rad}Q${x0 + bw},${t} ${x0 + bw},${t + rad}V${y0}Z`; }
     const b = y0 + hgt; return `M${x0},${y0}V${b - rad}Q${x0},${b} ${x0 + rad},${b}H${x0 + bw - rad}Q${x0 + bw},${b} ${x0 + bw},${b - rad}V${y0}Z`;
   };
+  // 95-%-Bereich als hellgrauer Balken hinter der Säule
+  svg.append('g').selectAll('rect').data(rows.filter((r) => r.ci != null)).join('rect')
+    .attr('x', (r) => cx(r) - bw / 2).attr('width', bw).attr('y', (r) => y(hi(r))).attr('height', (r) => y(lo(r)) - y(hi(r)))
+    .attr('rx', 3).style('fill', 'var(--grid)');
   svg.append('g').selectAll('path').data(rows).join('path').attr('d', barPath)
     .style('fill', (r) => (r.laufend ? (v(r) > 0 ? 'color-mix(in srgb, var(--warn) 12%, var(--panel))' : 'color-mix(in srgb, var(--good) 12%, var(--panel))') : v(r) > 0 ? 'var(--warn)' : 'var(--good)'))
     .style('stroke', (r) => (r.laufend ? (v(r) > 0 ? 'var(--warn)' : 'var(--good)') : 'none'))
@@ -713,7 +717,6 @@ function drawBars(box, rows, titel, extra) {
   svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'bl').style('font-size', fs.bl).attr('text-anchor', 'middle')
     .attr('x', cx)
     .attr('y', (r) => (v(r) > 0 ? y(v(r)) - 7 : Math.max(y(0), y(v(r))) + 16))
-    .style('paint-order', 'stroke').style('stroke', 'var(--panel)').attr('stroke-width', 4).attr('stroke-linejoin', 'round') // freigestellt vor dem 95-%-Strich
     .style('fill', (r) => (v(r) > 0 ? 'var(--warn)' : 'var(--fg)'))
     .text((r) => sign(v(r)) + g(Math.abs(v(r))) + ' g');
 
