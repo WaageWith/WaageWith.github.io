@@ -41,6 +41,7 @@ jobs:
           WITHINGS_CLIENT_SECRET: ${{ secrets.WITHINGS_CLIENT_SECRET }}
           STATE_KEY: ${{ secrets.STATE_KEY }}
           DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+          START_GEWICHT_KG: ${{ secrets.START_GEWICHT_KG }}
         run: python scripts/withings.py fetch
 
       # Läuft auch bei Fehlern, damit ein erneuerter Withings-Zugang nie verloren geht.

@@ -139,6 +139,15 @@ def fetch_measurements(token: str) -> list[dict]:
     ]
 
 
+def mit_startgewicht(messungen: list[dict], cfg: dict) -> list[dict]:
+    """Startgewicht (Secret START_GEWICHT_KG) als Messung am Startdatum, falls an dem Tag keine echte vorliegt."""
+    kg = os.environ.get("START_GEWICHT_KG", "").strip().replace(",", ".")
+    tag = cfg.get("start_datum")
+    if not kg or not tag or any(m["datum"] == tag for m in messungen):
+        return messungen
+    return sorted(messungen + [{"datum": tag, "zeit": None, "gewicht_kg": float(kg)}], key=lambda m: m["datum"])
+
+
 # ---------- Verschlüsselung für die App (AES-GCM, Schlüssel aus Passwort) ----------
 
 def b64(b: bytes) -> str:
@@ -199,8 +208,9 @@ def cmd_fetch() -> None:
         output("changed", "false")
         return
     token = access_token()
-    messungen = fetch_measurements(token)
-    payload = {"messungen": messungen, "einstellungen": config()}
+    cfg = config()
+    messungen = mit_startgewicht(fetch_measurements(token), cfg)
+    payload = {"messungen": messungen, "einstellungen": cfg}
     changed = write_data(payload)
     print(f"{len(messungen)} Tage mit Messung, letzte: {messungen[-1]['datum'] if messungen else '–'}; neu: {changed}")
     output("changed", "true" if changed else "false")
