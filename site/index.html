@@ -304,6 +304,8 @@ html { -webkit-text-size-adjust: 100%; }
 <script>
 // Kachel „Diese Woche“ ein-/ausblenden: true = sichtbar, false = ausgeblendet
 const ZEIGE_DIESE_WOCHE = false;
+// Wochenliste und Wochensäulen erst ab dieser Woche (KW 36), vorher nicht regelmäßig gewogen
+const WOCHEN_AB = Date.UTC(2026, 7, 31);
 const DAY = 864e5;
 const nf = (min, max = min) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
 const minus = (s) => s.replace('-', '−');
@@ -452,6 +454,7 @@ function drawTop(s) {
 }
 
 /* ---------- Wochen ---------- */
+const weeksAb = () => weeks().filter((r) => r.von.getTime() >= WOCHEN_AB);
 let showAll = false;
 function drawWeeks(rows) {
   const SHOW = 8;
@@ -488,7 +491,7 @@ function drawWeeks(rows) {
   more.hidden = list.length <= SHOW;
   more.textContent = showAll ? 'Weniger anzeigen' : `Alle ${list.length} Wochen anzeigen`;
 }
-$('more').addEventListener('click', () => { showAll = !showAll; drawWeeks(weeks()); });
+$('more').addEventListener('click', () => { showAll = !showAll; drawWeeks(weeksAb()); });
 
 /* ---------- Tooltips bei Touch: Tippen außerhalb eines Diagramms blendet sie aus ---------- */
 let hideTips = [];
@@ -635,10 +638,10 @@ function render() {
   hideTips = [];
   const s = summary();
   drawTop(s);
-  drawWeeks(weeks());
+  drawWeeks(weeksAb());
   drawChart(s.ziel);
   // Die letzten 8 Wochen (neueste rechts)
-  drawBars($('chart-wochen'), weeks().slice(-8).map((r) => ({
+  drawBars($('chart-wochen'), weeksAb().slice(-8).map((r) => ({
     key: r.kw, label: (i, schmal) => (schmal && i > 0 ? '' : 'KW ') + r.kw, v: -r.abn, kcal: r.laufend ? null : r.kcal, laufend: r.laufend,
   })), 'Abnahme pro Woche');
   drawBars($('chart-monate'), months().map((r) => ({ ...r, label: () => r.label })), 'Ø Abnahme pro Woche je Monat');
