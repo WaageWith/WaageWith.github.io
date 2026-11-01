@@ -160,6 +160,8 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .week.up.now .wval { color: var(--warn); }
 .more { align-self: flex-start; background: none; border: 0; padding: 0.25rem 0; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--accent); cursor: pointer; }
 .more:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+/* Wochentage nur am PC (zu wenige Werte, um am Handy Platz zu verdienen) */
+@media (max-width: 767px) { #wtage { display: none; } }
 @media (max-width: 520px) {
   .wrap { padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
   .card { padding: 1rem 1rem 0.75rem; }
@@ -295,6 +297,13 @@ html { -webkit-text-size-adjust: 100%; }
       <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>läuft noch</span></div>
     </div>
     <div class="chart" id="chart-monate"></div>
+  </section>
+
+  <section class="panel card" id="wtage">
+    <div class="card-head barhead"><h2>Ø Veränderung nach Wochentag</h2>
+      <div class="legend"><span>Tag = morgens gewogen bis nächsten Morgen</span></div>
+    </div>
+    <div class="chart" id="chart-wtage"></div>
   </section>
 
 </div>
@@ -455,6 +464,20 @@ function drawTop(s) {
 }
 
 /* ---------- Wochen ---------- */
+// Ø Veränderung je Wochentag: Messung am Folgemorgen minus Messung am Morgen des Tages
+// (nur direkt aufeinanderfolgende Tage ab WOCHEN_AB); kcal wie bei den Wochen: × 7.700
+function wochentage() {
+  const sum = Array(7).fill(0), n = Array(7).fill(0);
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i].t < WOCHEN_AB || Math.round((pts[i].t - pts[i - 1].t) / DAY) !== 1) continue;
+    const wd = (new Date(pts[i - 1].t).getUTCDay() + 6) % 7;
+    sum[wd] += pts[i].w - pts[i - 1].w; n[wd]++;
+  }
+  return ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((l, i) => {
+    const v = n[i] ? sum[i] / n[i] : 0;
+    return { key: l, label: () => l, v, kcal: Math.round((-v * 7700) / 10) * 10, laufend: false };
+  });
+}
 const weeksAb = () => weeks().filter((r) => r.von.getTime() >= WOCHEN_AB);
 let showAll = false;
 function drawWeeks(rows) {
@@ -649,6 +672,7 @@ function render() {
     key: r.kw, label: (i, schmal) => (schmal && i > 0 ? '' : 'KW ') + r.kw, v: -r.abn, kcal: r.laufend ? null : r.kcal, laufend: r.laufend,
   })), 'Abnahme pro Woche');
   drawBars($('chart-monate'), months().map((r) => ({ ...r, label: () => r.label })), 'Ø Abnahme pro Woche je Monat');
+  drawBars($('chart-wtage'), wochentage(), 'Ø Veränderung nach Wochentag');
 }
 window.addEventListener('resize', () => {
   if (!pts.length || window.innerWidth === lastW) return;
