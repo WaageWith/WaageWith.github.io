@@ -780,6 +780,7 @@ function render() {
 }
 // Kalender ab August 2026 bis heute: gewogen (blau) / nicht gewogen (grau), Tage danach leer
 const KALENDER_AB = Date.UTC(2026, 7, 1);
+const ZAEHLEN_AB = Date.UTC(2026, 8, 1); // Anzahl gewogener Tage erst ab 1. September (regelmäßiges Wiegen)
 function drawKalender() {
   const jetzt = new Date(), heute = Date.UTC(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate());
   const gew = new Map(pts.filter((p) => p.t >= KALENDER_AB).map((p) => [p.t, p]));
@@ -794,7 +795,7 @@ function drawKalender() {
     for (let t = m.getTime(); new Date(t).getUTCMonth() === m.getUTCMonth(); t += DAY) {
       const p = gew.get(t), tag = el('span', t > heute ? null : p ? 'kal-ja' : 'kal-nein', String(new Date(t).getUTCDate()));
       if (t <= heute) {
-        alle++; if (p) ja++;
+        if (t >= ZAEHLEN_AB) { alle++; if (p) ja++; }
         tag.title = fTag.format(new Date(t)) + (p ? `: ${kg1(p.w)} kg${p.zeit ? ', ' + p.zeit + ' Uhr' : ''}` : ': nicht gewogen');
       }
       grid.append(tag);
@@ -804,7 +805,7 @@ function drawKalender() {
     monate.push(box);
   }
   $('kal').replaceChildren(...monate);
-  $('kal-anzahl').textContent = `${ja} von ${alle} Tagen gewogen`;
+  $('kal-anzahl').textContent = `${ja} von ${alle} Tagen gewogen seit 1. September`;
 }
 // Wochentage: Starttag wählbar, jedes Gerät merkt sich seine Wahl (leer = zurück auf WOCHEN_AB)
 let wtAb = WOCHEN_AB;
