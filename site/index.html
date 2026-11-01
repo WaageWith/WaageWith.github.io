@@ -301,7 +301,7 @@ html { -webkit-text-size-adjust: 100%; }
 
   <section class="panel card" id="wtage">
     <div class="card-head barhead"><h2>Ø Veränderung nach Wochentag</h2>
-      <div class="legend"><span>Tag = morgens gewogen bis nächsten Morgen</span></div>
+      <div class="legend"><span>Tag = morgens gewogen bis nächsten Morgen</span><span id="wtage-p"></span></div>
     </div>
     <div class="chart" id="chart-wtage"></div>
   </section>
@@ -464,19 +464,64 @@ function drawTop(s) {
 }
 
 /* ---------- Wochen ---------- */
+// Statistik: regularisierte unvollständige Betafunktion (Numerical Recipes) für F- und t-Verteilung
+function lgamma(x) {
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+  let y = x, tmp = x + 5.5, ser = 1.000000000190015;
+  tmp -= (x + 0.5) * Math.log(tmp);
+  for (const v of c) ser += v / ++y;
+  return -tmp + Math.log((2.5066282746310005 * ser) / x);
+}
+function betacf(a, b, x) {
+  const tiny = 1e-30, fix = (v) => (Math.abs(v) < tiny ? tiny : v);
+  let c = 1, d = 1 / fix(1 - ((a + b) * x) / (a + 1)), h = d;
+  for (let m = 1; m <= 200; m++) {
+    const m2 = 2 * m;
+    let aa = (m * (b - m) * x) / ((a - 1 + m2) * (a + m2));
+    d = 1 / fix(1 + aa * d); c = fix(1 + aa / c); h *= d * c;
+    aa = (-(a + m) * (a + b + m) * x) / ((a + m2) * (a + 1 + m2));
+    d = 1 / fix(1 + aa * d); c = fix(1 + aa / c);
+    const del = d * c; h *= del;
+    if (Math.abs(del - 1) < 3e-12) break;
+  }
+  return h;
+}
+function ibeta(x, a, b) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  return x < (a + 1) / (a + b + 2) ? (bt * betacf(a, b, x)) / a : 1 - (bt * betacf(b, a, 1 - x)) / b;
+}
+const pWertF = (F, d1, d2) => ibeta(d2 / (d2 + d1 * F), d2 / 2, d1 / 2);            // P(F-Verteilung ≥ F)
+const t95 = (df) => { let lo = 0, hi = 50;                                            // zweiseitiges 95-%-Quantil der t-Verteilung
+  for (let k = 0; k < 60; k++) { const m = (lo + hi) / 2; if (ibeta(df / (df + m * m), df / 2, 0.5) > 0.05) lo = m; else hi = m; }
+  return (lo + hi) / 2; };
+
 // Ø Veränderung je Wochentag: Messung am Folgemorgen minus Messung am Morgen des Tages
-// (nur direkt aufeinanderfolgende Tage ab WOCHEN_AB); kcal wie bei den Wochen: × 7.700
+// (nur direkt aufeinanderfolgende Tage ab WOCHEN_AB); kcal wie bei den Wochen: × 7.700.
+// Aussagekraft: je Tag 95-%-Bereich des Mittelwerts (t-Verteilung), gesamt Varianzanalyse (p-Wert).
 function wochentage() {
-  const sum = Array(7).fill(0), n = Array(7).fill(0);
+  const g = Array.from({ length: 7 }, () => []);
   for (let i = 1; i < pts.length; i++) {
     if (pts[i].t < WOCHEN_AB || Math.round((pts[i].t - pts[i - 1].t) / DAY) !== 1) continue;
-    const wd = (new Date(pts[i - 1].t).getUTCDay() + 6) % 7;
-    sum[wd] += pts[i].w - pts[i - 1].w; n[wd]++;
+    g[(new Date(pts[i - 1].t).getUTCDay() + 6) % 7].push(pts[i].w - pts[i - 1].w);
   }
-  return ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((l, i) => {
-    const v = n[i] ? sum[i] / n[i] : 0;
-    return { key: l, label: () => l, v, kcal: Math.round((-v * 7700) / 10) * 10, laufend: false };
+  const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  const sd = (a) => Math.sqrt(a.reduce((x, y) => x + (y - avg(a)) ** 2, 0) / (a.length - 1));
+  const rows = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((l, i) => {
+    const a = g[i], v = a.length ? avg(a) : 0;
+    const ci = a.length > 1 ? (t95(a.length - 1) * sd(a)) / Math.sqrt(a.length) : null;
+    return { key: l, label: () => l, v, ci, kcal: Math.round((-v * 7700) / 10) * 10, laufend: false };
   });
+  const used = g.filter((a) => a.length), all = used.flat(), N = all.length, k = used.length;
+  let p = null;
+  if (k > 1 && N > k) {
+    const m = avg(all);
+    const ssb = used.reduce((x, a) => x + a.length * (avg(a) - m) ** 2, 0);
+    const ssw = used.reduce((x, a) => x + a.reduce((y, v) => y + (v - avg(a)) ** 2, 0), 0);
+    p = ssw > 0 ? pWertF(ssb / (k - 1) / (ssw / (N - k)), k - 1, N - k) : null;
+  }
+  return { rows, p, N };
 }
 const weeksAb = () => weeks().filter((r) => r.von.getTime() >= WOCHEN_AB);
 let showAll = false;
@@ -607,7 +652,7 @@ function drawChart(ziel) {
 
 /* ---------- Säulen (Wochen bzw. Monate) ---------- */
 // rows: { key, label(i, schmal), v = Veränderung in kg (Abnahme negativ), kcal (positiv = Defizit, null = offen), laufend }
-function drawBars(box, rows, titel) {
+function drawBars(box, rows, titel, extra) {
   box.replaceChildren();
   if (!rows.length) return;
   const W = Math.max(280, box.clientWidth);
@@ -617,7 +662,7 @@ function drawBars(box, rows, titel) {
   const top = vmax > 0 ? 24 : 8;                 // Platz für „+0,20“ über einer Zunahme
   const y = d3.scaleLinear([vmin, vmax === vmin ? vmin + 1 : vmax], [top + plotH, top]);
   const yLab = top + plotH + 38;                 // KW-Beschriftung (unter den Werten der tiefsten Säule)
-  const ySep = yLab + 16, yCap = ySep + 26, yKcal = yCap + 24, H = yKcal + 8;
+  const ySep = yLab + 16, yCap = ySep + 26, yKcal = yCap + 24, yCap2 = yKcal + 30, yExtra = yCap2 + 24, H = (extra ? yExtra : yKcal) + 8;
   box.style.minHeight = H + 'px';
   const x = d3.scaleBand(rows.map((r) => r.key), [0, W]).paddingInner(0.3).paddingOuter(0.25);
   const bw = Math.min(48, x.bandwidth());
@@ -658,6 +703,11 @@ function drawBars(box, rows, titel) {
     .attr('x', cx).attr('y', yKcal)
     .style('fill', (r) => (r.laufend ? 'var(--muted)' : r.kcal < 0 ? 'var(--warn)' : 'var(--fg)'))
     .text((r) => (r.kcal == null ? 'offen' : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal))));
+  // Optional eine weitere Zeile darunter (z. B. Unsicherheit)
+  if (!extra) return;
+  svg.append('text').attr('class', 'kcalcap').attr('x', 0).attr('y', yCap2).text(extra.cap);
+  svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'kcalv').style('font-size', fs.kcal).attr('text-anchor', 'middle')
+    .attr('x', cx).attr('y', yExtra).style('fill', 'var(--muted)').text(extra.text);
 }
 
 function render() {
@@ -672,7 +722,11 @@ function render() {
     key: r.kw, label: (i, schmal) => (schmal && i > 0 ? '' : 'KW ') + r.kw, v: -r.abn, kcal: r.laufend ? null : r.kcal, laufend: r.laufend,
   })), 'Abnahme pro Woche');
   drawBars($('chart-monate'), months().map((r) => ({ ...r, label: () => r.label })), 'Ø Abnahme pro Woche je Monat');
-  drawBars($('chart-wtage'), wochentage(), 'Ø Veränderung nach Wochentag');
+  const wt = wochentage();
+  drawBars($('chart-wtage'), wt.rows, 'Ø Veränderung nach Wochentag',
+    { cap: 'UNSICHERHEIT (95 %), G', text: (r) => (r.ci == null ? '–' : '±' + g(r.ci)) });
+  const stufe = wt.p == null ? null : wt.p < 0.05 ? 'hoch – Unterschiede wahrscheinlich echt' : wt.p < 0.1 ? 'mittel – noch unsicher' : 'gering – Unterschiede können Zufall sein';
+  $('wtage-p').textContent = stufe ? `Aussagekraft: ${stufe} (p = ${nf(2).format(wt.p)}, ${wt.N} Tage)` : '';
 }
 window.addEventListener('resize', () => {
   if (!pts.length || window.innerWidth === lastW) return;
