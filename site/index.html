@@ -194,6 +194,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .kcalv { font-size: 13px; font-weight: 600; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .barlabel { fill: var(--fg); font-size: 13px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .legend .l-dash { width: 14px; height: 0; border-top: 2px dashed var(--accent); }
+.legend .l-ci { width: 9px; height: 12px; box-sizing: border-box; border: solid var(--fg); border-width: 1.5px 0; background: linear-gradient(var(--fg), var(--fg)) center / 1.5px 100% no-repeat; opacity: 0.75; }
 .tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(16, 24, 40, 0.14); padding: 0.375rem 0.625rem; font-size: 0.875rem; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
 .tip .d { color: var(--muted); font-size: 0.8125rem; }
 
@@ -301,7 +302,7 @@ html { -webkit-text-size-adjust: 100%; }
 
   <section class="panel card" id="wtage">
     <div class="card-head barhead"><h2>Ø Veränderung nach Wochentag</h2>
-      <div class="legend"><span>Tag = morgens gewogen bis nächsten Morgen</span><span id="wtage-p"></span></div>
+      <div class="legend"><span>Tag = morgens gewogen bis nächsten Morgen</span><span><i class="l-ci"></i>95-%-Bereich</span><span id="wtage-p"></span></div>
     </div>
     <div class="chart" id="chart-wtage"></div>
   </section>
@@ -657,7 +658,9 @@ function drawBars(box, rows, titel, extra) {
   if (!rows.length) return;
   const W = Math.max(280, box.clientWidth);
   const v = (r) => r.v; // Abnahme nach unten, Zunahme nach oben
-  const vmin = Math.min(0, d3.min(rows, v)), vmax = Math.max(0, d3.max(rows, v));
+  // Mit 95-%-Bereich (r.ci, kg) reicht die Skala bis zu dessen Enden
+  const lo = (r) => (r.ci == null ? v(r) : v(r) - r.ci), hi = (r) => (r.ci == null ? v(r) : v(r) + r.ci);
+  const vmin = Math.min(0, d3.min(rows, lo)), vmax = Math.max(0, d3.max(rows, hi));
   const plotH = W < 520 ? 150 : 190;
   const top = vmax > 0 ? 24 : 8;                 // Platz für „+0,20“ über einer Zunahme
   const y = d3.scaleLinear([vmin, vmax === vmin ? vmin + 1 : vmax], [top + plotH, top]);
@@ -685,11 +688,18 @@ function drawBars(box, rows, titel, extra) {
     .style('stroke', (r) => (r.laufend ? (v(r) > 0 ? 'var(--warn)' : 'var(--good)') : 'none'))
     .attr('stroke-width', 1.5).attr('stroke-dasharray', (r) => (r.laufend ? '4 3' : null));
 
-  // Werte an den Säulenenden, immer mit Vorzeichen
+  // 95-%-Bereich als Strich mit Querstrichen an den Enden
+  const ciRows = rows.filter((r) => r.ci != null), cap = Math.min(10, bw * 0.35);
+  const ciG = svg.append('g').style('stroke', 'var(--fg)').style('opacity', 0.75).attr('stroke-width', 1.5);
+  ciG.selectAll('line.v').data(ciRows).join('line').attr('class', 'v').attr('x1', cx).attr('x2', cx).attr('y1', (r) => y(lo(r))).attr('y2', (r) => y(hi(r)));
+  for (const f of [lo, hi]) ciG.append('g').selectAll('line').data(ciRows).join('line')
+    .attr('x1', (r) => cx(r) - cap).attr('x2', (r) => cx(r) + cap).attr('y1', (r) => y(f(r))).attr('y2', (r) => y(f(r)));
+
+  // Werte an den Säulenenden (bzw. hinter dem 95-%-Bereich), immer mit Vorzeichen
   const sign = (x) => (x > 0 ? '+' : x < 0 ? '−' : '±');
   svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'bl').style('font-size', fs.bl).attr('text-anchor', 'middle')
     .attr('x', cx)
-    .attr('y', (r) => (v(r) > 0 ? y(v(r)) - 7 : Math.max(y(0), y(v(r))) + 16))
+    .attr('y', (r) => (v(r) > 0 ? y(hi(r)) - 7 : Math.max(y(0), y(lo(r))) + 16))
     .style('fill', (r) => (v(r) > 0 ? 'var(--warn)' : 'var(--fg)'))
     .text((r) => sign(v(r)) + g(Math.abs(v(r))) + ' g');
 
