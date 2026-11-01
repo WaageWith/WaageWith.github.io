@@ -694,12 +694,19 @@ function drawBars(box, rows, titel, extra) {
     .style('stroke', (r) => (r.laufend ? (v(r) > 0 ? 'var(--warn)' : 'var(--good)') : 'none'))
     .attr('stroke-width', 1.5).attr('stroke-dasharray', (r) => (r.laufend ? '4 3' : null));
 
-  // 95-%-Bereich als Strich mit Querstrichen an den Enden
-  const ciRows = rows.filter((r) => r.ci != null), cap = Math.min(10, bw * 0.35);
+  // 95-%-Bereich: Querstrich an beiden Enden, senkrecht nur kurz angedeutet (nie durch die Säule)
+  const ciRows = rows.filter((r) => r.ci != null), cap = Math.min(10, bw * 0.35), STUB = 8;
   const ciG = svg.append('g').style('stroke', 'var(--fg)').style('opacity', 0.75).attr('stroke-width', 1.5);
-  ciG.selectAll('line.v').data(ciRows).join('line').attr('class', 'v').attr('x1', cx).attr('x2', cx).attr('y1', (r) => y(lo(r))).attr('y2', (r) => y(hi(r)));
-  for (const f of [lo, hi]) ciG.append('g').selectAll('line').data(ciRows).join('line')
-    .attr('x1', (r) => cx(r) - cap).attr('x2', (r) => cx(r) + cap).attr('y1', (r) => y(f(r))).attr('y2', (r) => y(f(r)));
+  const stub = (r, f) => {
+    const py = y(f(r)), top = y(Math.max(0, v(r))), bottom = y(Math.min(0, v(r)));
+    return py < top ? Math.min(py + STUB, top) : py > bottom ? Math.max(py - STUB, bottom) : py;
+  };
+  for (const f of [lo, hi]) {
+    ciG.append('g').selectAll('line').data(ciRows).join('line')
+      .attr('x1', (r) => cx(r) - cap).attr('x2', (r) => cx(r) + cap).attr('y1', (r) => y(f(r))).attr('y2', (r) => y(f(r)));
+    ciG.append('g').selectAll('line').data(ciRows).join('line')
+      .attr('x1', cx).attr('x2', cx).attr('y1', (r) => y(f(r))).attr('y2', (r) => stub(r, f));
+  }
 
   // Werte an den Säulenenden, immer mit Vorzeichen
   const sign = (x) => (x > 0 ? '+' : x < 0 ? '−' : '±');
