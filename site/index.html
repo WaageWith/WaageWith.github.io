@@ -161,6 +161,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .more { align-self: flex-start; background: none; border: 0; padding: 0.25rem 0; font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--accent); cursor: pointer; }
 .more:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 @media (max-width: 520px) {
+  .wrap { padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
   .card { padding: 1rem 1rem 0.75rem; }
   .wk { padding-right: 0.75rem; }
   .wval { padding-left: 0.75rem; font-size: 1.1875rem; }
