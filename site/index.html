@@ -310,7 +310,7 @@ const DAY = 864e5;
 const nf = (min, max = min) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
 const minus = (s) => s.replace('-', '−');
 const kg1 = (v) => minus(nf(1).format(v));
-const kg2 = (v) => minus(nf(2).format(v));
+const g = (v) => minus(nf(0).format(Math.round(v * 100) * 10)); // kg-Wert in Gramm, auf 10 g gerundet
 const fLong = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 const fMon = new Intl.DateTimeFormat('de-DE', { month: 'short', timeZone: 'UTC' });
 const $ = (id) => document.getElementById(id);
@@ -429,7 +429,7 @@ function drawTop(s) {
     const t = $(id);
     t.classList.remove('good', 'bad');
     if (change == null) { $(valId).textContent = '–'; t.querySelector('.ico').textContent = ''; return; }
-    withUnit(valId, (change > 0 ? '+' : change < 0 ? '−' : '') + kg2(Math.abs(change)), 'kg');
+    withUnit(valId, (change > 0 ? '+' : change < 0 ? '−' : '') + g(Math.abs(change)), 'g');
     t.classList.add(change <= 0 ? 'good' : 'bad');
     t.querySelector('.ico').textContent = change <= 0 ? '↓' : '↑';
   };
@@ -460,9 +460,11 @@ function drawWeeks(rows) {
   const SHOW = 8;
   const list = [...rows].reverse();
   const visible = showAll ? list : list.slice(0, SHOW);
-  // Gemeinsame Skala: Abnahme nach rechts (grün), Zunahme nach links (rot), Nulllinie dazwischen
-  const maxLoss = Math.max(0, d3.max(rows, (r) => r.abn) || 0);
-  const maxGain = Math.max(0, d3.max(rows, (r) => -r.abn) || 0);
+  // Feste Skala: grauer Balken = 1 kg Abnahme, ab 1 kg ist er ganz grün. Abnahme nach rechts (grün),
+  // Zunahme nach links (rot, ebenfalls bis höchstens 1 kg), Nulllinie dazwischen
+  const MAX = 1;
+  const maxLoss = MAX;
+  const maxGain = Math.min(MAX, Math.max(0, d3.max(rows, (r) => -r.abn) || 0));
   const span = maxLoss + maxGain || 1;
   const zero = (maxGain / span) * 100;
   const dm = (d) => `${d.getUTCDate()}.${d.getUTCMonth() + 1}.`;
@@ -473,7 +475,7 @@ function drawWeeks(rows) {
     const cell = el('div', 'trackcell');
     const track = el('div', 'track');
     const bar = el('div', 'bar');
-    const w = (Math.abs(r.abn) / span) * 100;
+    const w = (Math.min(MAX, Math.abs(r.abn)) / span) * 100;
     bar.style.width = w + '%';
     bar.style.left = (r.abn >= 0 ? zero : zero - w) + '%';
     bar.classList.add(maxGain === 0 ? 'flush' : r.abn >= 0 ? 'pos' : 'neg');
@@ -481,7 +483,7 @@ function drawWeeks(rows) {
     if (maxGain > 0) { const z = el('div', 'zero'); z.style.left = zero + '%'; track.append(z); }
     cell.append(track);
     const val = el('div', 'wval');
-    val.append(el('span', null, (r.abn > 0 ? '−' : r.abn < 0 ? '+' : '±') + kg2(Math.abs(r.abn))), el('span', 'unit', ' kg'));
+    val.append(el('span', null, (r.abn > 0 ? '−' : r.abn < 0 ? '+' : '±') + g(Math.abs(r.abn))), el('span', 'unit', ' g'));
     // Abnahme: Defizit pro Tag. Zunahme: so viel pro Tag mehr gegessen als verbraucht (mit +)
     const kcal = el('div', 'kcal', (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal)) + ' kcal');
     li.append(wk, cell, val, kcal);
@@ -619,7 +621,7 @@ function drawBars(box, rows, titel) {
     .attr('x', cx)
     .attr('y', (r) => (v(r) > 0 ? y(v(r)) - 7 : Math.max(y(0), y(v(r))) + 16))
     .style('fill', (r) => (v(r) > 0 ? 'var(--warn)' : 'var(--fg)'))
-    .text((r) => sign(v(r)) + nf(2).format(Math.abs(v(r))));
+    .text((r) => sign(v(r)) + g(Math.abs(v(r))));
 
   svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').style('font-size', fs.tick).attr('text-anchor', 'middle')
     .attr('x', cx).attr('y', yLab).text((r, i) => r.label(i, x.step() < 48));
