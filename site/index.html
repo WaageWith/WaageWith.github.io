@@ -767,7 +767,7 @@ function drawBars(box, rows, titel, extras = []) {
 
 // Wochensäulen kompakt (sobald die Zahlen an den Säulen nicht mehr nebeneinander passen, v. a. am Handy):
 // Säulen ohne Zahlen, gestrichelte Linie = Durchschnitt der abgeschlossenen Wochen, Antippen zeigt den Wert
-// (anfangs die letzte abgeschlossene Woche)
+// (anfangs die letzte abgeschlossene Woche). Achse rechts: Linien alle 100 g, Zahl alle 200 g, „0 g“ an der Nulllinie
 function drawWochenKompakt(box, rows) {
   box.replaceChildren();
   const W = Math.max(280, box.clientWidth), top = 60, plotH = 150, H = top + plotH + 44;
@@ -779,10 +779,23 @@ function drawWochenKompakt(box, rows) {
   const avgEl = $('wochen-avg');
   avgEl.hidden = avg == null;
   if (avg != null) avgEl.replaceChildren(el('i', 'l-dash'), document.createTextNode(`Durchschnitt ${vz(avg)}${g(Math.abs(avg))} g`));
-  const y = d3.scaleLinear([Math.min(-0.2, d3.min(rows, v)), Math.max(0, d3.max(rows, v))], [top + plotH, top]);
-  const x = d3.scaleBand(rows.map((r) => r.kw), [0, W]).paddingInner(0.3).paddingOuter(0.15);
-  const bw = x.bandwidth(), cx = (r) => x(r.kw) + bw / 2;
+  const hi = Math.max(0, d3.max(rows, v)), lo = Math.min(-0.2, d3.min(rows, v));
+  // Linien alle 100 g, Zahl alle 200 g; ab 1,2 kg Spanne doppelt so weit (k = Vielfache von 100 g, ganzzahlig gegen Rundungsfehler)
+  const f = hi - lo > 1.2 ? 2 : 1;
+  const y = d3.scaleLinear([Math.floor(lo * 10 / (2 * f) - 1e-9) * 2 * f / 10, hi], [top + plotH, top]);
+  const linien = d3.range(Math.round(y.domain()[0] * 10), Math.floor(hi * 10 + 1e-9) + 1).filter((k) => k !== 0 && k % f === 0);
+  const zahlen = [0, ...linien.filter((k) => k % (2 * f) === 0)];
+  const fmt = (k) => (k === 0 ? '0 g' : (k > 0 ? '+' : '−') + Math.abs(k) * 100);
   const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche');
+  const probe = svg.append('g').attr('class', 'tick').style('font-size', '12px');
+  const mr = Math.ceil(d3.max(zahlen, (k) => probe.append('text').text(fmt(k)).node().getComputedTextLength())) + 6;
+  probe.remove();
+  const x = d3.scaleBand(rows.map((r) => r.kw), [0, W - mr]).paddingInner(0.3).paddingOuter(0.15);
+  const bw = x.bandwidth(), cx = (r) => x(r.kw) + bw / 2;
+  svg.append('g').selectAll('line').data(linien).join('line').attr('x1', 0).attr('x2', W - mr).attr('y1', (k) => y(k / 10)).attr('y2', (k) => y(k / 10))
+    .style('stroke', 'var(--grid)').style('opacity', (k) => (k % (2 * f) === 0 ? 1 : 0.6));
+  svg.append('g').selectAll('text').data(zahlen).join('text').attr('class', 'tick').style('font-size', '12px')
+    .attr('x', W - mr + 6).attr('y', (k) => y(k / 10)).attr('dy', '0.32em').text(fmt);
   // Angetippte Säule dunkler
   const farbe = (r, aktiv) => (r.laufend ? `color-mix(in srgb, var(${v(r) > 0 ? '--warn' : '--good'}) 12%, var(--panel))`
     : v(r) > 0 ? (aktiv ? 'color-mix(in srgb, var(--warn) 75%, #000)' : 'var(--warn)') : aktiv ? 'var(--good-ink)' : 'var(--good)');
@@ -791,8 +804,8 @@ function drawWochenKompakt(box, rows) {
     .attr('y', (r) => Math.min(y(0), y(v(r)))).attr('height', (r) => Math.max(3, Math.abs(y(v(r)) - y(0)))).attr('rx', Math.min(3, bw / 2))
     .style('stroke', (r) => (r.laufend ? (v(r) > 0 ? 'var(--warn)' : 'var(--good)') : 'none'))
     .attr('stroke-width', 1.5).attr('stroke-dasharray', (r) => (r.laufend ? '4 3' : null));
-  svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--line)').attr('stroke-width', 1.5);
-  if (avg != null) svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', y(avg)).attr('y2', y(avg))
+  svg.append('line').attr('x1', 0).attr('x2', W - mr).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--line)').attr('stroke-width', 1.5);
+  if (avg != null) svg.append('line').attr('x1', 0).attr('x2', W - mr).attr('y1', y(avg)).attr('y2', y(avg))
     .style('stroke', 'var(--accent)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
   const ticks = svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').attr('text-anchor', 'middle')
     .attr('x', cx).attr('y', top + plotH + 22).text((r) => r.kw);
