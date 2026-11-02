@@ -349,8 +349,11 @@ const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
 /* ---------- Daten ---------- */
-let pts = [];
+let pts = [];      // Messungen für alle Auswertungen (ohne AUSGENOMMEN)
+let allePts = [];  // alle Messungen, nur für den Kalender „Wiegetage“
 let cfg = {};
+// 09.08.2026: erste Probemessung nach dem Kauf um 14 Uhr, deutlich schwerer → verzerrt die Auswertungen
+const AUSGENOMMEN = new Set([Date.UTC(2026, 7, 9)]);
 const mean = (a) => a.reduce((s, p) => s + p.w, 0) / a.length;
 // 7-Tage-Schnitt bis einschließlich t (null, wenn in diesen 7 Tagen nicht gemessen wurde)
 const avg7 = (t) => { const v = pts.filter((p) => p.t > t - 7 * DAY && p.t <= t); return v.length ? mean(v) : null; };
@@ -780,7 +783,7 @@ const KALENDER_AB = Date.UTC(2026, 7, 1);
 const ZAEHLEN_AB = Date.UTC(2026, 8, 1); // Anzahl gewogener Tage erst ab 1. September (regelmäßiges Wiegen)
 function drawKalender() {
   const jetzt = new Date(), heute = Date.UTC(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate());
-  const gew = new Map(pts.filter((p) => p.t >= KALENDER_AB).map((p) => [p.t, p]));
+  const gew = new Map(allePts.filter((p) => p.t >= KALENDER_AB).map((p) => [p.t, p]));
   const fMonat = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const fTag = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'UTC' });
   const monate = [];
@@ -852,10 +855,11 @@ async function load(password) {
   lastLoad = Date.now();
   cfg = data.einstellungen || {};
   const startAb = cfg.start_datum ? Date.parse(cfg.start_datum + 'T00:00:00Z') : -Infinity;
-  pts = (data.messungen || [])
+  allePts = (data.messungen || [])
     .map((r) => ({ t: Date.parse(String(r.datum).slice(0, 10) + 'T00:00:00Z'), w: Number(r.gewicht_kg), zeit: r.zeit || null }))
     .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.w) && p.t >= startAb)
     .sort((a, b) => a.t - b.t);
+  pts = allePts.filter((p) => !AUSGENOMMEN.has(p.t));
   if (!pts.length) { show('empty'); return; }
   show('app');
   render();
