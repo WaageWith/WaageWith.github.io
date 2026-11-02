@@ -584,8 +584,8 @@ function drawWeeks(rows) {
     cell.append(track);
     const val = el('div', 'wval');
     val.append(el('span', null, (r.abn > 0 ? '−' : r.abn < 0 ? '+' : '±') + g(Math.abs(r.abn))), el('span', 'unit', ' g'));
-    // Abnahme: Defizit pro Tag. Zunahme: so viel pro Tag mehr gegessen als verbraucht (mit +)
-    const kcal = el('div', 'kcal', (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal)) + ' kcal');
+    // Abnahme: Defizit pro Tag. Zunahme: so viel pro Tag mehr gegessen als verbraucht (mit +). Laufende Woche: leer (noch nicht aussagekräftig)
+    const kcal = el('div', 'kcal', r.laufend ? '' : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal)) + ' kcal');
     li.append(wk, cell, val, kcal);
     return li;
   }));
