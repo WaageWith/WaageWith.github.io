@@ -336,8 +336,8 @@ html { -webkit-text-size-adjust: 100%; }
 <script>
 // Kachel „Diese Woche“ ein-/ausblenden: true = sichtbar, false = ausgeblendet
 const ZEIGE_DIESE_WOCHE = false;
-// Wochenliste und Wochensäulen erst ab dieser Woche (KW 36), vorher nicht regelmäßig gewogen
-const WOCHEN_AB = Date.UTC(2026, 7, 31);
+// Wochenliste, Wochensäulen und Wochentage ab der ersten gültigen Messung (10.08.2026, KW 33)
+const WOCHEN_AB = Date.UTC(2026, 7, 10);
 const DAY = 864e5;
 const nf = (min, max = min) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
 const minus = (s) => s.replace('-', '−');
@@ -361,10 +361,19 @@ const avg7 = (t) => { const v = pts.filter((p) => p.t > t - 7 * DAY && p.t <= t)
 // Alle Kennzahlen aus echten Messwerten, Wochen von Montag bis Sonntag.
 // Wochenwert = letzte Messung der Woche minus letzte Messung der Woche davor
 // (erste Woche: minus Startmessung). So ergibt die Summe aller Wochen genau die Gesamtabnahme.
+// Liegt ein Sonntag in einer Messlücke, wird sein Gewicht linear zwischen den Nachbarmessungen geschätzt,
+// damit die Abnahme auf die Wochen verteilt wird statt komplett in der nächsten gemessenen Woche zu landen.
 function weeks() {
   const monday = (t) => t - ((new Date(t).getUTCDay() + 6) % 7) * DAY;
+  const reihe = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[i + 1];
+    reihe.push(a);
+    if (b) for (let t = a.t + DAY; t < b.t; t += DAY)
+      if (new Date(t).getUTCDay() === 0) reihe.push({ t, w: a.w + ((b.w - a.w) * (t - a.t)) / (b.t - a.t), geschaetzt: true });
+  }
   const groups = new Map();
-  for (const p of pts) { const m = monday(p.t); if (!groups.has(m)) groups.set(m, []); groups.get(m).push(p); }
+  for (const p of reihe) { const m = monday(p.t); if (!groups.has(m)) groups.set(m, []); groups.get(m).push(p); }
   const last = pts[pts.length - 1].t;
   const out = [];
   let ref = pts[0];
@@ -763,8 +772,8 @@ function render() {
   drawTop(s);
   drawWeeks(weeksAb());
   drawChart(s.ziel);
-  // Die letzten 8 Wochen (neueste rechts)
-  drawBars($('chart-wochen'), weeksAb().slice(-8).map((r) => ({
+  // Alle Wochen ab WOCHEN_AB (neueste rechts)
+  drawBars($('chart-wochen'), weeksAb().map((r) => ({
     key: r.kw, label: (i, schmal) => (schmal && i > 0 ? '' : 'KW ') + r.kw, v: -r.abn, kcal: r.laufend ? null : r.kcal, laufend: r.laufend,
   })), 'Abnahme pro Woche');
   drawBars($('chart-monate'), months().map((r) => ({ ...r, label: () => r.label })), 'Ø Abnahme pro Woche je Monat');
