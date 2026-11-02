@@ -955,6 +955,8 @@ let neuerAufruf = true, verstecktSeit = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { verstecktSeit = Date.now(); return; }
   if (verstecktSeit && Date.now() - verstecktSeit >= 5 * 60000) neuerAufruf = true;
+  verstecktSeit = 0; // Safari meldet „sichtbar“ manchmal doppelt
+
   if (Date.now() - lastLoad > 60000) boot();
 });
 document.fonts?.ready.then(() => { if (pts.length) render(); });
