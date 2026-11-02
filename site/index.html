@@ -302,7 +302,7 @@ html { -webkit-text-size-adjust: 100%; }
 
   <section class="panel card" id="saeulen">
     <div class="card-head barhead"><h2>Abnahme pro Woche</h2>
-      <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>läuft noch</span></div>
+      <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>läuft noch</span><span id="wochen-avg" hidden></span></div>
     </div>
     <div class="chart" id="chart-wochen"></div>
   </section>
@@ -555,6 +555,7 @@ function wochentage(ab) {
   return { rows, p, N };
 }
 const weeksAb = () => weeks().filter((r) => r.von.getTime() >= WOCHEN_AB);
+const dm = (d) => `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.`;
 let showAll = false;
 function drawWeeks(rows) {
   const SHOW = 8;
@@ -567,7 +568,6 @@ function drawWeeks(rows) {
   const maxGain = Math.min(MAX, Math.max(0, d3.max(rows, (r) => -r.abn) || 0));
   const span = maxLoss + maxGain || 1;
   const zero = (maxGain / span) * 100;
-  const dm = (d) => `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.`;
   $('weeks').replaceChildren(...visible.map((r) => {
     const li = el('li', 'week' + (r.abn < 0 ? ' up' : '') + (r.laufend ? ' now' : ''));
     const wk = el('div', 'wk');
@@ -765,6 +765,63 @@ function drawBars(box, rows, titel, extras = []) {
   });
 }
 
+// Wochensäulen kompakt (sobald die Zahlen an den Säulen nicht mehr nebeneinander passen, v. a. am Handy):
+// Säulen ohne Zahlen, gestrichelte Linie = Durchschnitt der abgeschlossenen Wochen, Antippen zeigt den Wert
+// (anfangs die letzte abgeschlossene Woche)
+function drawWochenKompakt(box, rows) {
+  box.replaceChildren();
+  const W = Math.max(280, box.clientWidth), top = 60, plotH = 150, H = top + plotH + 44;
+  box.style.minHeight = H + 'px';
+  const v = (r) => -r.abn; // Abnahme nach unten, Zunahme nach oben
+  const fertig = rows.filter((r) => !r.laufend);
+  const avg = fertig.length ? d3.mean(fertig, v) : null;
+  const vz = (x) => (x > 0 ? '+' : x < 0 ? '−' : '±');
+  const avgEl = $('wochen-avg');
+  avgEl.hidden = avg == null;
+  if (avg != null) avgEl.replaceChildren(el('i', 'l-dash'), document.createTextNode(`Durchschnitt ${vz(avg)}${g(Math.abs(avg))} g`));
+  const y = d3.scaleLinear([Math.min(-0.2, d3.min(rows, v)), Math.max(0, d3.max(rows, v))], [top + plotH, top]);
+  const x = d3.scaleBand(rows.map((r) => r.kw), [0, W]).paddingInner(0.3).paddingOuter(0.15);
+  const bw = x.bandwidth(), cx = (r) => x(r.kw) + bw / 2;
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche');
+  // Angetippte Säule dunkler
+  const farbe = (r, aktiv) => (r.laufend ? `color-mix(in srgb, var(${v(r) > 0 ? '--warn' : '--good'}) 12%, var(--panel))`
+    : v(r) > 0 ? (aktiv ? 'color-mix(in srgb, var(--warn) 75%, #000)' : 'var(--warn)') : aktiv ? 'var(--good-ink)' : 'var(--good)');
+  const bars = svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', (r) => cx(r) - bw / 2).attr('width', bw)
+    .attr('y', (r) => Math.min(y(0), y(v(r)))).attr('height', (r) => Math.max(3, Math.abs(y(v(r)) - y(0)))).attr('rx', Math.min(3, bw / 2))
+    .style('stroke', (r) => (r.laufend ? (v(r) > 0 ? 'var(--warn)' : 'var(--good)') : 'none'))
+    .attr('stroke-width', 1.5).attr('stroke-dasharray', (r) => (r.laufend ? '4 3' : null));
+  svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--line)').attr('stroke-width', 1.5);
+  if (avg != null) svg.append('line').attr('x1', 0).attr('x2', W).attr('y1', y(avg)).attr('y2', y(avg))
+    .style('stroke', 'var(--accent)').attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
+  const ticks = svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').attr('text-anchor', 'middle')
+    .attr('x', cx).attr('y', top + plotH + 22).text((r) => r.kw);
+  svg.append('text').attr('class', 'tick').attr('x', 0).attr('y', H - 2).text('Kalenderwoche');
+
+  const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
+  const guide = svg.append('line').style('stroke', 'var(--muted)').attr('stroke-dasharray', '2 3').style('display', 'none');
+  const zeige = (r) => {
+    bars.style('fill', (q) => farbe(q, q === r));
+    ticks.style('font-weight', (q) => (q === r ? 700 : null)).style('fill', (q) => (q === r ? 'var(--fg)' : null));
+    if (!r) { tip.hidden = true; guide.style('display', 'none'); return; }
+    const z = el('div');
+    z.append(el('b', null, vz(v(r)) + g(Math.abs(r.abn)) + ' g'), document.createTextNode(' · ' + (r.laufend ? 'läuft noch'
+      : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal)) + ' kcal/Tag')));
+    tip.replaceChildren(el('div', 'd', `KW ${r.kw} · ${dm(r.von)}–${dm(r.bis)}`), z);
+    tip.hidden = false;
+    const scale = box.clientWidth / W;
+    tip.style.left = Math.max(0, Math.min(box.clientWidth - tip.offsetWidth, cx(r) * scale - tip.offsetWidth / 2)) + 'px';
+    tip.style.top = '0px';
+    guide.style('display', null).attr('x1', cx(r)).attr('x2', cx(r)).attr('y1', tip.offsetHeight / scale).attr('y2', y(Math.max(0, v(r))));
+  };
+  const start = fertig[fertig.length - 1] || null;
+  zeige(start);
+  svg.append('rect').attr('width', W).attr('height', top + plotH + 30).style('fill', 'transparent')
+    .on('pointermove pointerdown', (ev) => { const [px] = d3.pointer(ev, svg.node()); zeige(d3.least(rows, (q) => Math.abs(cx(q) - px))); })
+    .on('pointerleave', (ev) => { if (ev.pointerType === 'mouse') zeige(start); });
+  hideTips.push(() => zeige(null));
+}
+
 function render() {
   if (!pts.length) return;
   hideTips = [];
@@ -773,9 +830,14 @@ function render() {
   drawWeeks(weeksAb());
   drawChart(s.ziel);
   // Alle Wochen ab WOCHEN_AB (neueste rechts)
-  drawBars($('chart-wochen'), weeksAb().map((r) => ({
-    key: r.kw, label: (i, schmal) => (schmal && i > 0 ? '' : 'KW ') + r.kw, v: -r.abn, kcal: r.laufend ? null : r.kcal, laufend: r.laufend,
-  })), 'Abnahme pro Woche');
+  const wochen = weeksAb(), wBox = $('chart-wochen');
+  if (wBox.clientWidth / wochen.length < 48) drawWochenKompakt(wBox, wochen);
+  else {
+    $('wochen-avg').hidden = true;
+    drawBars(wBox, wochen.map((r) => ({
+      key: r.kw, label: (i, schmal) => (schmal && i > 0 ? '' : 'KW ') + r.kw, v: -r.abn, kcal: r.laufend ? null : r.kcal, laufend: r.laufend,
+    })), 'Abnahme pro Woche');
+  }
   drawBars($('chart-monate'), months().map((r) => ({ ...r, label: () => r.label })), 'Ø Abnahme pro Woche je Monat');
   const iso = (t) => new Date(t).toISOString().slice(0, 10);
   Object.assign($('wtage-ab'), { min: iso(pts[0].t), max: iso(pts[pts.length - 1].t), value: iso(wtAb) });
