@@ -559,7 +559,7 @@ function drawWeeks(rows) {
   $('weeks').replaceChildren(...visible.map((r) => {
     const li = el('li', 'week' + (r.abn < 0 ? ' up' : '') + (r.laufend ? ' now' : ''));
     const wk = el('div', 'wk');
-    wk.append(el('b', null, 'KW ' + r.kw), el('span', null, r.laufend ? 'läuft noch' : `${dm(r.von)}–${dm(r.bis)}`));
+    wk.append(el('b', null, 'KW ' + r.kw), el('span', null, `${dm(r.von)}–${dm(r.bis)}`));
     const cell = el('div', 'trackcell');
     const track = el('div', 'track');
     const bar = el('div', 'bar');
