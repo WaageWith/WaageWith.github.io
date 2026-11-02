@@ -860,15 +860,28 @@ async function load(password) {
   show('app');
   render();
 }
+// Mamas Handy fragt nie nach dem Passwort, auch nach dem Löschen der Websitedaten (Fabians Wunsch, 02.11.2026).
+// Passwort und Geräte-ID liegen hier verschlüsselt, Schlüssel = Gerätemodell. Neues Dashboard-Passwort → neu erzeugen.
+const GERAET_ZUGANG = {"v":1,"iter":310000,"salt":"WtI/1jPDnnMe0zxhUOniqA==","iv":"Qm1uPzyRJITtuL1L","ct":"ffa41FIHkVdf9E8DMAQ1OFAFGP6mJm7aQ2ogDLd9MZHPlcmOcz2Q2R4O9mj/C8A="};
+async function erkanntesGeraet() {
+  try {
+    const modell = (await navigator.userAgentData?.getHighEntropyValues?.(['model']))?.model;
+    if (!modell) return null;
+    const d = await decrypt(GERAET_ZUGANG, modell);
+    try { localStorage.setItem('waage-geraet', d.id); } catch (e) {}
+    return d.pw;
+  } catch (e) { return null; }
+}
 async function boot() {
   const neu = neuerAufruf;
   neuerAufruf = false;
-  const pw = store.get();
+  let pw = store.get(), zugang = 'Passwort gespeichert';
+  if (!pw && (pw = await erkanntesGeraet())) zugang = 'Handy erkannt';
   if (!pw) { show('lock'); if (neu) aufrufMerken('ohne Passwort'); return; }
-  try { await load(pw); if (neu) aufrufMerken('Passwort gespeichert'); }
+  try { await load(pw); store.set(pw); if (neu) aufrufMerken(zugang); }
   catch (e) {
     if (e && e.message === 'offline') {
-      if (neu) aufrufMerken('Passwort gespeichert');
+      if (neu) aufrufMerken(zugang);
       if (!pts.length) { $('loading').textContent = 'Keine Verbindung. Bitte später erneut öffnen.'; }
       return;
     }
