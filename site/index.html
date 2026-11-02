@@ -211,8 +211,6 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .legend .l-ci { width: 9px; height: 12px; box-sizing: border-box; border: solid var(--fg); border-width: 1.5px 0; background: linear-gradient(var(--fg), var(--fg)) center / 1.5px 100% no-repeat; opacity: 0.75; }
 .tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(16, 24, 40, 0.14); padding: 0.375rem 0.625rem; font-size: 0.875rem; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
 .tip .d { color: var(--muted); font-size: 0.8125rem; }
-.wsel { display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; font-size: 0.875rem; min-height: 1.4em; margin-bottom: 0.5rem; }
-.wsel .d { color: var(--muted); }
 
 details { font-size: 0.875rem; color: var(--muted); padding-inline: 0.25rem; }
 summary { cursor: pointer; font-weight: 600; color: var(--fg); padding-block: 0.25rem; }
@@ -769,10 +767,10 @@ function drawBars(box, rows, titel, extras = []) {
 
 // Wochensäulen kompakt (sobald die Zahlen an den Säulen nicht mehr nebeneinander passen, v. a. am Handy):
 // Säulen ohne Zahlen, gestrichelte Linie = Durchschnitt der abgeschlossenen Wochen, Antippen zeigt den Wert
-// in einer Zeile über den Säulen (anfangs die letzte abgeschlossene Woche, bleibt stehen)
+// (anfangs die letzte abgeschlossene Woche)
 function drawWochenKompakt(box, rows) {
   box.replaceChildren();
-  const W = Math.max(280, box.clientWidth), top = 6, plotH = 150, H = top + plotH + 44;
+  const W = Math.max(280, box.clientWidth), top = 60, plotH = 150, H = top + plotH + 44;
   box.style.minHeight = H + 'px';
   const v = (r) => -r.abn; // Abnahme nach unten, Zunahme nach oben
   const fertig = rows.filter((r) => !r.laufend);
@@ -800,21 +798,28 @@ function drawWochenKompakt(box, rows) {
     .attr('x', cx).attr('y', top + plotH + 22).text((r) => r.kw);
   svg.append('text').attr('class', 'tick').attr('x', 0).attr('y', H - 2).text('Kalenderwoche');
 
-  const info = el('div', 'wsel tnum'); box.prepend(info);
+  const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
+  const guide = svg.append('line').style('stroke', 'var(--muted)').attr('stroke-dasharray', '2 3').style('display', 'none');
   const zeige = (r) => {
     bars.style('fill', (q) => farbe(q, q === r));
     ticks.style('font-weight', (q) => (q === r ? 700 : null)).style('fill', (q) => (q === r ? 'var(--fg)' : null));
-    if (!r) { info.replaceChildren(); return; }
-    const z = el('span');
+    if (!r) { tip.hidden = true; guide.style('display', 'none'); return; }
+    const z = el('div');
     z.append(el('b', null, vz(v(r)) + g(Math.abs(r.abn)) + ' g'), document.createTextNode(' · ' + (r.laufend ? 'läuft noch'
       : (r.kcal > 0 ? '−' : r.kcal < 0 ? '+' : '±') + nf(0).format(Math.abs(r.kcal)) + ' kcal/Tag')));
-    info.replaceChildren(el('span', 'd', `KW ${r.kw} · ${dm(r.von)}–${dm(r.bis)}`), z);
+    tip.replaceChildren(el('div', 'd', `KW ${r.kw} · ${dm(r.von)}–${dm(r.bis)}`), z);
+    tip.hidden = false;
+    const scale = box.clientWidth / W;
+    tip.style.left = Math.max(0, Math.min(box.clientWidth - tip.offsetWidth, cx(r) * scale - tip.offsetWidth / 2)) + 'px';
+    tip.style.top = '0px';
+    guide.style('display', null).attr('x1', cx(r)).attr('x2', cx(r)).attr('y1', tip.offsetHeight / scale).attr('y2', y(Math.max(0, v(r))));
   };
   const start = fertig[fertig.length - 1] || null;
   zeige(start);
   svg.append('rect').attr('width', W).attr('height', top + plotH + 30).style('fill', 'transparent')
     .on('pointermove pointerdown', (ev) => { const [px] = d3.pointer(ev, svg.node()); zeige(d3.least(rows, (q) => Math.abs(cx(q) - px))); })
     .on('pointerleave', (ev) => { if (ev.pointerType === 'mouse') zeige(start); });
+  hideTips.push(() => zeige(null));
 }
 
 function render() {
