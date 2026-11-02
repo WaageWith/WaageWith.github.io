@@ -767,7 +767,7 @@ function drawBars(box, rows, titel, extras = []) {
 
 // Wochensäulen kompakt (sobald die Zahlen an den Säulen nicht mehr nebeneinander passen, v. a. am Handy):
 // Säulen ohne Zahlen, gestrichelte Linie = Durchschnitt der abgeschlossenen Wochen, Antippen zeigt den Wert
-// (anfangs die letzte abgeschlossene Woche). Achse rechts: Linien alle 100 g, Zahl alle 200 g, „0 g“ an der Nulllinie
+// (anfangs die aktuelle Woche, nie nichts ausgewählt). Achse rechts: Linien alle 100 g, Zahl alle 200 g, „0 g“ an der Nulllinie
 function drawWochenKompakt(box, rows) {
   box.replaceChildren();
   const W = Math.max(280, box.clientWidth), top = 60, plotH = 150, H = top + plotH + 44;
@@ -827,12 +827,11 @@ function drawWochenKompakt(box, rows) {
     tip.style.top = '0px';
     guide.style('display', null).attr('x1', cx(r)).attr('x2', cx(r)).attr('y1', tip.offsetHeight / scale).attr('y2', y(Math.max(0, v(r))));
   };
-  const start = fertig[fertig.length - 1] || null;
+  const start = rows[rows.length - 1];
   zeige(start);
   svg.append('rect').attr('width', W).attr('height', top + plotH + 30).style('fill', 'transparent')
     .on('pointermove pointerdown', (ev) => { const [px] = d3.pointer(ev, svg.node()); zeige(d3.least(rows, (q) => Math.abs(cx(q) - px))); })
     .on('pointerleave', (ev) => { if (ev.pointerType === 'mouse') zeige(start); });
-  hideTips.push(() => zeige(null));
 }
 
 function render() {
