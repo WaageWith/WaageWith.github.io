@@ -341,7 +341,7 @@ const WOCHEN_AB = Date.UTC(2026, 7, 10);
 const DAY = 864e5;
 const nf = (min, max = min) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max });
 const minus = (s) => s.replace('-', '−');
-const kg1 = (v) => minus(nf(1).format(v));
+const kg1 = (v) => minus(nf(2).format(v)); // kg mit 2 Nachkommastellen (Fabians Wunsch, 03.11.2026)
 const g = (v) => minus(nf(0).format(Math.round(v * 100) * 10)); // kg-Wert in Gramm, auf 10 g gerundet
 const fLong = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 const fMon = new Intl.DateTimeFormat('de-DE', { month: 'short', timeZone: 'UTC' });
