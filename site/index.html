@@ -194,6 +194,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8125rem; color: var(--muted); }
 .legend i { display: inline-block; vertical-align: middle; margin-right: 0.35rem; }
 .legend .l-line { width: 14px; height: 2px; background: var(--accent); border-radius: 1px; }
+.legend .l-line.good { background: var(--good); }
 .legend .l-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mark); }
 .legend .l-sq { width: 9px; height: 9px; border-radius: 2px; background: var(--good); }
 .legend .l-sq.up { background: var(--warn); }
@@ -307,6 +308,13 @@ html { -webkit-text-size-adjust: 100%; }
     <div class="chart" id="chart"></div>
   </section>
 
+  <section class="panel card" id="tempo">
+    <div class="card-head"><h2>Abnahme pro Woche</h2>
+      <div class="legend"><span><i class="l-line good"></i>Ø 4 Wochen</span></div>
+    </div>
+    <div class="chart" id="chart-tempo"></div>
+  </section>
+
   <section class="panel card" id="monate">
     <div class="card-head barhead"><h2>Ø Abnahme pro Woche je Monat</h2>
       <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>läuft noch</span></div>
@@ -416,6 +424,21 @@ function months() {
   return out.slice(-12);
 }
 
+// Trendlinie (lineare Regression) durch alle Messungen der 28 Tage bis einschließlich t.
+// kgWoche positiv = abgenommen, spanne = Tage von der ersten Messung im Fenster bis t,
+// luecke = größter Abstand zwischen zwei Messungen im Fenster bzw. von der letzten Messung bis t (Tage).
+function trend28(t) {
+  const fenster = pts.filter((p) => p.t > t - 28 * DAY && p.t <= t);
+  if (!fenster.length) return null;
+  const spanne = (t - fenster[0].t) / DAY;
+  const luecke = fenster.reduce((mx, p, i) => (i ? Math.max(mx, (p.t - fenster[i - 1].t) / DAY) : mx), (t - fenster[fenster.length - 1].t) / DAY);
+  if (fenster.length < 3) return { kgWoche: null, spanne, luecke, n: fenster.length };
+  const mt = fenster.reduce((s, p) => s + p.t, 0) / fenster.length, mw = mean(fenster);
+  const steigung = fenster.reduce((s, p) => s + (p.t - mt) * (p.w - mw), 0)
+    / fenster.reduce((s, p) => s + (p.t - mt) ** 2, 0) * DAY; // kg pro Tag, negativ = abgenommen
+  return { kgWoche: -steigung * 7, spanne, luecke, n: fenster.length };
+}
+
 function summary() {
   const wk = weeks();
   const cur = wk.length && wk[wk.length - 1].laufend ? wk[wk.length - 1] : null;
@@ -424,15 +447,11 @@ function summary() {
   // bis zur letzten Messung, täglich neu. Gleicht Tagesschwankungen durch Wasser usw. aus.
   let proWoche = null, kcal4 = null, anzahl = 0;
   const lastT = pts[pts.length - 1].t;
-  const fenster = pts.filter((p) => p.t > lastT - 28 * DAY);
-  const spanne = (lastT - fenster[0].t) / DAY;
-  if (fenster.length >= 3 && spanne >= 6) {
-    const mt = fenster.reduce((s, p) => s + p.t, 0) / fenster.length, mw = mean(fenster);
-    const steigung = fenster.reduce((s, p) => s + (p.t - mt) * (p.w - mw), 0)
-      / fenster.reduce((s, p) => s + (p.t - mt) ** 2, 0) * DAY; // kg pro Tag, negativ = abgenommen
-    proWoche = -steigung * 7;                                    // positiv = abgenommen
-    kcal4 = Math.round((steigung * 7700) / 10) * 10;
-    anzahl = Math.min(4, Math.round((spanne + 1) / 7));
+  const tr = trend28(lastT);
+  if (tr && tr.kgWoche != null && tr.spanne >= 6) {
+    proWoche = tr.kgWoche;                                       // positiv = abgenommen
+    kcal4 = Math.round((-proWoche / 7 * 7700) / 10) * 10;
+    anzahl = Math.min(4, Math.round((tr.spanne + 1) / 7));
   }
   // Startgewicht aus den Einstellungen (vor der ersten Messung) gilt nur für „Abgenommen“, nicht für Diagramme
   const start = cfg.start_gewicht_kg && cfg.start_datum ? { t: Date.parse(cfg.start_datum + 'T00:00:00Z'), w: cfg.start_gewicht_kg } : pts[0];
@@ -681,6 +700,73 @@ function drawChart(ziel) {
   hideTips.push(() => { hover.style('display', 'none'); tip.hidden = true; });
 }
 
+/* ---------- Tempo: Abnahme pro Woche, Ø 4 Wochen, täglich ---------- */
+// Für jeden Tag die Trendlinie der 28 Tage davor (wie Kachel „Pro Woche“). Nur Tage, deren Fenster
+// mind. 14 Tage Messungen und keine Lücke über 7 Tage hat (sonst verzerrt z. B. die Lücke 13.–29.08.2026).
+// Abnahme nach oben, letzter Punkt = Wert der Kachel „Pro Woche“.
+function drawTempo() {
+  const box = $('chart-tempo');
+  box.replaceChildren();
+  const lastT = pts[pts.length - 1].t;
+  const rows = [];
+  for (let t = pts[0].t; t <= lastT; t += DAY) {
+    const tr = trend28(t);
+    if (tr && tr.kgWoche != null && tr.spanne >= 14 && tr.luecke <= 7) rows.push({ d: new Date(t), v: tr.kgWoche });
+  }
+  $('tempo').hidden = rows.length < 2;
+  if (rows.length < 2) return;
+  const W = Math.max(280, box.clientWidth);
+  const H = W < 520 ? 230 : 280;
+  box.style.minHeight = H + 'px';
+  const y = d3.scaleLinear([Math.min(0, d3.min(rows, (r) => r.v)), Math.max(0.1, d3.max(rows, (r) => r.v)) * 1.1], [H - 26, 10]).nice();
+  const yt = y.ticks(5);
+  const yf = (v) => (v === 0 ? '0' : nf(0).format(Math.abs(Math.round(v * 1000))) + ' g');
+  const wert = (v) => (v > 0 ? '−' : v < 0 ? '+' : '') + nf(0).format(Math.abs(Math.round(v * 100) * 10)) + ' g';
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche, Durchschnitt 4 Wochen');
+  const measure = (texts, cls) => { const g = svg.append('g').attr('class', cls); const w = d3.max(texts, (t) => g.append('text').text(t).node().getComputedTextLength()) || 0; g.remove(); return w; };
+  const last = rows[rows.length - 1];
+  const endLabel = wert(last.v);
+  const m = { l: measure(yt.map(yf), 'tick') + 10, r: measure([endLabel], 'endlabel') + 14, t: 10, b: 26 };
+  const x = d3.scaleUtc(d3.extent(rows, (r) => r.d), [m.l, W - m.r]);
+  y.range([H - m.b, m.t]);
+
+  svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => y(v)).attr('y2', (v) => y(v)).style('stroke', 'var(--grid)');
+  svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'tick').attr('x', m.l - 8).attr('y', (v) => y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text(yf);
+  // Monate; liegt der erste Monatsanfang weit vom Beginn, steht der Startmonat links am Rand
+  const xt = x.ticks(d3.utcMonth.every(1));
+  svg.append('g').selectAll('text').data(xt).join('text').attr('class', 'tick').attr('x', (d) => x(d)).attr('y', H - 6).attr('text-anchor', 'middle').text((d) => fMon.format(d));
+  if (!xt.length || x(xt[0]) - m.l > 40) svg.append('text').attr('class', 'tick').attr('x', m.l).attr('y', H - 6).attr('text-anchor', 'start').text(fMon.format(rows[0].d));
+  svg.append('path').datum(rows).attr('d', d3.area((r) => x(r.d), y(0), (r) => y(r.v))).style('fill', 'color-mix(in srgb, var(--good) 14%, transparent)');
+  svg.append('path').datum(rows).attr('d', d3.line((r) => x(r.d), (r) => y(r.v))).style('fill', 'none').style('stroke', 'var(--good)').attr('stroke-width', 2.5).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+  svg.append('circle').attr('cx', x(last.d)).attr('cy', y(last.v)).attr('r', 4.5).style('fill', 'var(--good)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
+  svg.append('text').attr('class', 'endlabel').attr('x', x(last.d) + 8).attr('y', y(last.v)).attr('dy', '0.32em').style('fill', 'var(--good-ink)').text(endLabel);
+
+  const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
+  const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
+  const hl = hover.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--line)');
+  const hd = hover.append('circle').attr('r', 4.5).style('fill', 'var(--good)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
+  svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
+    .style('fill', 'transparent')
+    .on('pointermove pointerdown', (ev) => {
+      const [px] = d3.pointer(ev, svg.node());
+      const t0 = x.invert(px);
+      const r = d3.least(rows, (q) => Math.abs(q.d - t0));
+      const cx = x(r.d);
+      hover.style('display', null); hl.attr('x1', cx).attr('x2', cx); hd.attr('cx', cx).attr('cy', y(r.v));
+      const line = el('div');
+      line.append(el('b', null, wert(r.v)), document.createTextNode(' pro Woche'));
+      tip.replaceChildren(el('div', 'd', fLong.format(r.d)), line);
+      tip.hidden = false;
+      const scale = box.clientWidth / W;
+      let left = cx * scale + 12;
+      if (left + tip.offsetWidth > box.clientWidth) left = Math.max(0, cx * scale - tip.offsetWidth - 12);
+      tip.style.left = left + 'px';
+      tip.style.top = Math.max(0, y(r.v) * scale - 52) + 'px';
+    })
+    .on('pointerleave', (ev) => { if (ev.pointerType === 'mouse') { hover.style('display', 'none'); tip.hidden = true; } });
+  hideTips.push(() => { hover.style('display', 'none'); tip.hidden = true; });
+}
+
 /* ---------- Säulen (Wochen bzw. Monate) ---------- */
 // rows: { key, label(i, schmal), v = Veränderung in kg (Abnahme negativ), kcal (positiv = Defizit, null = offen), laufend }
 function drawBars(box, rows, titel, extras = []) {
@@ -841,6 +927,7 @@ function render() {
   drawTop(s);
   drawWeeks(weeksAb());
   drawChart(s.ziel);
+  drawTempo();
   // Alle Wochen ab WOCHEN_AB (neueste rechts)
   const wochen = weeksAb(), wBox = $('chart-wochen');
   if (wBox.clientWidth / wochen.length < 48) drawWochenKompakt(wBox, wochen);
