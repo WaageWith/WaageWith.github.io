@@ -938,9 +938,8 @@ async function load(password) {
   lastLoad = Date.now();
   cfg = data.einstellungen || {};
   const startAb = cfg.start_datum ? Date.parse(cfg.start_datum + 'T00:00:00Z') : -Infinity;
-  // Gewicht auf 0,1 kg wie das Waagen-Display; alle Rechnungen nutzen diese Werte
   allePts = (data.messungen || [])
-    .map((r) => ({ t: Date.parse(String(r.datum).slice(0, 10) + 'T00:00:00Z'), w: Math.floor(Math.round(Number(r.gewicht_kg) * 100) / 10 + 0.5) / 10, zeit: r.zeit || null }))
+    .map((r) => ({ t: Date.parse(String(r.datum).slice(0, 10) + 'T00:00:00Z'), w: Number(r.gewicht_kg), zeit: r.zeit || null }))
     .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.w) && p.t >= startAb)
     .sort((a, b) => a.t - b.t);
   pts = allePts.filter((p) => !AUSGENOMMEN.has(p.t));

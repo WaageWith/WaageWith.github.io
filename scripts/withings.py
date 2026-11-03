@@ -21,7 +21,6 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -114,11 +113,6 @@ def access_token() -> str:
 
 # ---------- Messungen ----------
 
-def kg01(kg: float) -> float:
-    """Kaufmännisch auf 0,1 kg runden (Decimal, damit 106,25 sicher 106,3 wird)."""
-    return float(Decimal(str(round(kg, 6))).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
-
-
 def fetch_measurements(token: str) -> list[dict]:
     raw, offset = [], None
     while True:
@@ -139,9 +133,8 @@ def fetch_measurements(token: str) -> list[dict]:
     for ts, kg in sorted(raw):
         day = dt.datetime.fromtimestamp(ts, TZ).date().isoformat()
         per_day.setdefault(day, (ts, kg))
-    # Auf 0,1 kg wie das Waagen-Display (Body Smart, ~50 g genau); API liefert feiner
     return [
-        {"datum": day, "zeit": dt.datetime.fromtimestamp(ts, TZ).strftime("%H:%M"), "gewicht_kg": kg01(kg)}
+        {"datum": day, "zeit": dt.datetime.fromtimestamp(ts, TZ).strftime("%H:%M"), "gewicht_kg": round(kg, 2)}
         for day, (ts, kg) in sorted(per_day.items())
     ]
 
