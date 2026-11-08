@@ -702,8 +702,7 @@ function drawChart(ziel) {
 
 /* ---------- Tempo: Abnahme pro Woche, Ø 4 Wochen, täglich ---------- */
 // Für jeden Tag die Trendlinie der 28 Tage davor (wie Kachel „Pro Woche“). Nur Tage, deren Fenster
-// mind. 14 Tage Messungen hat und die eine Messung in den letzten 7 Tagen haben. Lücken im Fenster sind erlaubt
-// (Lücke 13.–29.08.2026: Schnitt aus den Werten davor und danach, Kurve beginnt so am 30.08.2026).
+// mind. 14 Tage Messungen und keine Lücke über 7 Tage hat (sonst verzerrt z. B. die Lücke 13.–29.08.2026).
 // Abnahme nach oben, letzter Punkt = Wert der Kachel „Pro Woche“.
 function drawTempo() {
   const box = $('chart-tempo');
@@ -712,7 +711,7 @@ function drawTempo() {
   const rows = [];
   for (let t = pts[0].t; t <= lastT; t += DAY) {
     const tr = trend28(t);
-    if (tr && tr.kgWoche != null && tr.spanne >= 14 && pts.some((p) => p.t <= t && p.t > t - 7 * DAY)) rows.push({ d: new Date(t), v: tr.kgWoche });
+    if (tr && tr.kgWoche != null && tr.spanne >= 14 && tr.luecke <= 7) rows.push({ d: new Date(t), v: tr.kgWoche });
   }
   $('tempo').hidden = rows.length < 2;
   if (rows.length < 2) return;
