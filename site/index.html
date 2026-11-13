@@ -355,6 +355,9 @@ const kg1 = (v) => minus(nf(1).format(v)); // 1 Nachkommastelle wie das Waagen-D
 const g = (v) => minus(nf(0).format(Math.round(v * 100) * 10)); // kg-Wert in Gramm, auf 10 g gerundet
 const fLong = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 const fMon = new Intl.DateTimeFormat('de-DE', { month: 'short', timeZone: 'UTC' });
+const WTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+// ISO-Kalenderwoche (Woche gehört zum Jahr ihres Donnerstags)
+const kwVon = (t) => { const thu = t + (3 - ((new Date(t).getUTCDay() + 6) % 7)) * DAY, y = new Date(thu).getUTCFullYear(); return Math.floor((thu - Date.UTC(y, 0, 1)) / DAY / 7) + 1; };
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -661,6 +664,11 @@ function drawChart(ziel) {
 
   svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => y(v)).attr('y2', (v) => y(v)).style('stroke', 'var(--grid)');
   svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'tick').attr('x', m.l - 8).attr('y', (v) => y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => yf.format(v));
+  // Wochengrenzen (seit 13.11.2026): gestrichelte Linie zwischen Sonntag und Montag
+  const montage = d3.utcMonday.range(new Date(rows[0].d.getTime() + 1), new Date(rows[rows.length - 1].d.getTime() + 1));
+  svg.append('g').selectAll('line').data(montage).join('line')
+    .attr('x1', (d) => x(d - DAY / 2)).attr('x2', (d) => x(d - DAY / 2)).attr('y1', m.t).attr('y2', H - m.b)
+    .style('stroke', 'var(--muted)').style('opacity', 0.45).attr('stroke-dasharray', '3 3');
   // Achse: bei kurzen Zeiträumen Tage, sonst Monate
   const spanDays = (rows[rows.length - 1].d - rows[0].d) / DAY;
   const fDay = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -688,7 +696,7 @@ function drawChart(ziel) {
       const cx = x(r.d);
       // Fokus auf die Messung: Punkt auf dem gewogenen Wert, Gewicht groß, 7-Tage-Schnitt klein darunter
       hover.style('display', null); hl.attr('x1', cx).attr('x2', cx); hd.attr('cx', cx).attr('cy', y(r.w));
-      tip.replaceChildren(el('div', 'd', fLong.format(r.d)), el('div', 'k', kg1(r.w) + ' kg'), el('div', 's', '7-Tage-Schnitt ' + kg1(r.tr) + ' kg'));
+      tip.replaceChildren(el('div', 'd', `${WTAG[r.d.getUTCDay()]}, ${fLong.format(r.d)} · KW ${kwVon(r.d.getTime())}`), el('div', 'k', kg1(r.w) + ' kg'), el('div', 's', '7-Tage-Schnitt ' + kg1(r.tr) + ' kg'));
       tip.hidden = false;
       const scale = box.clientWidth / W;
       let left = cx * scale + 12;
