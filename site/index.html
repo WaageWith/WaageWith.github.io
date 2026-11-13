@@ -355,7 +355,8 @@ const kg1 = (v) => minus(nf(1).format(v)); // 1 Nachkommastelle wie das Waagen-D
 const g = (v) => minus(nf(0).format(Math.round(v * 100) * 10)); // kg-Wert in Gramm, auf 10 g gerundet
 const fLong = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 const fMon = new Intl.DateTimeFormat('de-DE', { month: 'short', timeZone: 'UTC' });
-const WTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+const fMonLang = new Intl.DateTimeFormat('de-DE', { month: 'long', timeZone: 'UTC' });
+const WTAG = ['So','Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 // ISO-Kalenderwoche (Woche gehört zum Jahr ihres Donnerstags)
 const kwVon = (t) => { const thu = t + (3 - ((new Date(t).getUTCDay() + 6) % 7)) * DAY, y = new Date(thu).getUTCFullYear(); return Math.floor((thu - Date.UTC(y, 0, 1)) / DAY / 7) + 1; };
 const $ = (id) => document.getElementById(id);
@@ -648,17 +649,17 @@ function drawChart(ziel) {
   const box = $('chart');
   box.replaceChildren();
   const W = Math.max(280, box.clientWidth);
-  const H = W < 520 ? 230 : 280;
+  const H = (W < 520 ? 230 : 280) + 18; // +18 für die Monatszeile unter der Achse
   box.style.minHeight = H + 'px';
   const vals = rows.flatMap((r) => [r.w, r.tr]); if (ziel != null) vals.push(ziel);
-  const y = d3.scaleLinear([d3.min(vals) - 0.3, d3.max(vals) + 0.3], [H - 26, 10]).nice();
+  const y = d3.scaleLinear([d3.min(vals) - 0.3, d3.max(vals) + 0.3], [H - 44, 10]).nice();
   const yt = y.ticks(W < 520 ? 4 : 5);
   const yf = yt.length > 1 && yt[1] - yt[0] < 1 ? nf(1) : nf(0);
   const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Gewichtsverlauf');
   const measure = (texts, cls) => { const g = svg.append('g').attr('class', cls); const w = d3.max(texts, (t) => g.append('text').text(t).node().getComputedTextLength()) || 0; g.remove(); return w; };
   const last = rows[rows.length - 1];
   const endLabel = kg1(last.w) + ' kg';
-  const m = { l: measure(yt.map((v) => yf.format(v)), 'tick') + 10, r: measure([endLabel], 'endlabel') + 14, t: 10, b: 26 };
+  const m = { l: measure(yt.map((v) => yf.format(v)), 'tick') + 10, r: measure([endLabel], 'endlabel') + 14, t: 10, b: 44 };
   const x = d3.scaleUtc(d3.extent(rows, (r) => r.d), [m.l, W - m.r]);
   y.range([H - m.b, m.t]);
 
@@ -669,12 +670,22 @@ function drawChart(ziel) {
   svg.append('g').selectAll('line').data(montage).join('line')
     .attr('x1', (d) => x(d - DAY / 2)).attr('x2', (d) => x(d - DAY / 2)).attr('y1', m.t).attr('y2', H - m.b)
     .style('stroke', 'var(--muted)').style('opacity', 0.45).attr('stroke-dasharray', '3 3');
-  // Achse: bei kurzen Zeiträumen Tage, sonst Monate
-  const spanDays = (rows[rows.length - 1].d - rows[0].d) / DAY;
-  const fDay = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short', timeZone: 'UTC' });
-  const xt = spanDays <= 16 ? x.ticks(d3.utcDay.every(W < 520 ? 4 : 2)) : spanDays <= 40 ? x.ticks(d3.utcMonday.every(1)) : spanDays <= 100 ? x.ticks(d3.utcMonth.every(1)) : x.ticks(d3.utcMonth.every(spanDays > 400 ? 2 : 1));
-  const xf = spanDays <= 40 ? (d) => fDay.format(d) : (d) => fMon.format(d);
-  svg.append('g').selectAll('text').data(xt).join('text').attr('class', 'tick').attr('x', (d) => x(d)).attr('y', H - 6).attr('text-anchor', 'middle').text(xf);
+  // Achse (seit 13.11.2026): oben Tageszahlen (14 Tage: jeder Tag, sonst Montage), darunter einmal der Monat über seinen Bereich
+  const t0 = rows[0].d.getTime(), t1 = last.d.getTime();
+  const spanDays = (t1 - t0) / DAY;
+  const pxTag = (W - m.l - m.r) / Math.max(1, spanDays);
+  const tage = spanDays <= 16
+    ? d3.utcDay.range(new Date(t0), new Date(t1 + 1)).filter((d) => pxTag >= 22 || Math.round((t1 - d) / DAY) % 2 === 0)
+    : montage.filter((d, i, a) => (a.length - 1 - i) % Math.max(1, Math.ceil(26 / (pxTag * 7))) === 0);
+  svg.append('g').selectAll('text').data(tage).join('text').attr('class', 'tick').attr('x', (d) => x(d)).attr('y', H - m.b + 18).attr('text-anchor', 'middle').text((d) => d.getUTCDate());
+  const gMon = svg.append('g');
+  d3.utcMonth.range(d3.utcMonth.floor(new Date(t0)), new Date(t1 + 1)).forEach((s, i) => {
+    const a = Math.max(+s, t0), b = Math.min(+d3.utcMonth.offset(s, 1) - DAY, t1);
+    if (i > 0) gMon.append('line').attr('x1', x(a - DAY / 2)).attr('x2', x(a - DAY / 2)).attr('y1', H - m.b + 26).attr('y2', H - 2).style('stroke', 'var(--line)');
+    const platz = x(b) - x(a) + pxTag - 6, lang = fMonLang.format(s), kurz = fMon.format(s);
+    const txt = measure([lang], 'tick') <= platz ? lang : measure([kurz], 'tick') <= platz ? kurz : '';
+    if (txt) gMon.append('text').attr('class', 'tick').style('fill', 'var(--fg)').attr('x', (x(a) + x(b)) / 2).attr('y', H - 6).attr('text-anchor', 'middle').text(txt);
+  });
   if (ziel != null) {
     svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(ziel)).attr('y2', y(ziel)).style('stroke', 'var(--muted)').attr('stroke-dasharray', '4 4').style('opacity', 0.6);
   }
