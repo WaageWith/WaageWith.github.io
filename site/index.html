@@ -399,7 +399,9 @@ function weeks() {
     const kw = Math.floor((thu - Date.UTC(y, 0, 1)) / DAY / 7) + 1;
     const abn = ref.w - end.w; // positiv = abgenommen
     const tage = Math.max(1, Math.round((end.t - ref.t) / DAY));
-    out.push({ kw, von: new Date(m), bis: new Date(m + 6 * DAY), abn, tage, kcal: Math.round((abn * 7700) / tage / 10) * 10, laufend: m + 6 * DAY >= last });
+    out.push({ kw, von: new Date(m), bis: new Date(m + 6 * DAY), abn, tage, kcal: Math.round((abn * 7700) / tage / 10) * 10,
+      // laufend = Sonntag noch nicht gewogen; aktuell = Woche der letzten Messung
+      laufend: m + 6 * DAY > last, aktuell: m + 7 * DAY > last });
     ref = end;
   }
   return out;
@@ -447,7 +449,7 @@ function trend28(t) {
 
 function summary() {
   const wk = weeks();
-  const cur = wk.length && wk[wk.length - 1].laufend ? wk[wk.length - 1] : null;
+  const cur = wk.length && wk[wk.length - 1].aktuell ? wk[wk.length - 1] : null;
 
   // „Pro Woche“ und „kcal/Tag“: Trendlinie (lineare Regression) durch alle Messungen der letzten 28 Tage
   // bis zur letzten Messung, täglich neu. Gleicht Tagesschwankungen durch Wasser usw. aus.
