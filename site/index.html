@@ -630,15 +630,14 @@ document.addEventListener('pointerdown', (ev) => {
 
 /* ---------- Gewichtskurve ---------- */
 // Zeitraum der Gewichtskurve (wird pro Gerät gemerkt)
-let rangeDays = 0;
-try { rangeDays = Number(localStorage.getItem('waage-range') || 0); } catch (e) {}
-if (rangeDays === 91) rangeDays = 61; // frühere Auswahl „3 Monate“ → jetzt „2 Monate“
+// Beim Öffnen immer „2 Monate“ (seit 25.11.2026, Fabians Wunsch), die letzte Auswahl wird nicht gemerkt
+let rangeDays = 61;
+try { localStorage.removeItem('waage-range'); } catch (e) {}
 function syncRange() { document.querySelectorAll('#range button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.days) === rangeDays))); }
 syncRange();
 $('range').addEventListener('click', (ev) => {
   const b = ev.target.closest('button'); if (!b) return;
   rangeDays = Number(b.dataset.days);
-  try { localStorage.setItem('waage-range', String(rangeDays)); } catch (e) {}
   syncRange();
   if (pts.length) drawChart(null);
 });
@@ -661,9 +660,14 @@ function drawChart(ziel) {
   const measure = (texts, cls) => { const g = svg.append('g').attr('class', cls); const w = d3.max(texts, (t) => g.append('text').text(t).node().getComputedTextLength()) || 0; g.remove(); return w; };
   const last = rows[rows.length - 1];
   const endLabel = kg1(last.w) + ' kg';
-  const m = { l: measure(yt.map((v) => yf.format(v)), 'tick') + 10, r: measure([endLabel], 'endlabel') + 14, t: 10, b: 44 };
+  const m = { l: measure(yt.map((v) => yf.format(v)), 'tick') + 10, r: 6, t: 10, b: 44 };
   const x = d3.scaleUtc(d3.extent(rows, (r) => r.d), [m.l, W - m.r]);
   y.range([H - m.b, m.t]);
+  // Wert unter den Punkt, wenn die Linie von oben kommt, sonst darÃ¼ber; bei Bedarf Platz schaffen
+  const vorher = rows[Math.max(0, rows.length - 4)].tr, unten = vorher > last.w;
+  const proPx = (y.domain()[1] - y.domain()[0]) / (H - m.b - m.t);
+  const fehlt = unten ? y(last.w) + 26 - (H - m.b) : m.t - (y(last.w) - 26);
+  if (fehlt > 0) y.domain(unten ? [y.domain()[0] - fehlt * 1.3 * proPx, y.domain()[1]] : [y.domain()[0], y.domain()[1] + fehlt * 1.3 * proPx]);
 
   svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => y(v)).attr('y2', (v) => y(v)).style('stroke', 'var(--grid)');
   svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'tick').attr('x', m.l - 8).attr('y', (v) => y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text((v) => yf.format(v));
@@ -694,7 +698,7 @@ function drawChart(ziel) {
   svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', (r) => x(r.d)).attr('cy', (r) => y(r.w)).attr('r', rows.length < 40 ? 3.25 : 2.25).style('fill', 'var(--mark)');
   svg.append('path').datum(rows).attr('d', d3.line((r) => x(r.d), (r) => y(r.tr))).style('fill', 'none').style('stroke', 'var(--accent)').attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
   svg.append('circle').attr('cx', x(last.d)).attr('cy', y(last.w)).attr('r', 4).style('fill', 'var(--fg)');
-  svg.append('text').attr('class', 'endlabel').attr('x', x(last.d) + 8).attr('y', y(last.w)).attr('dy', '0.32em').text(endLabel);
+  svg.append('text').attr('class', 'endlabel').attr('x', x(last.d) + 4).attr('y', y(last.w) + (unten ? 17 : -17)).attr('dy', '0.32em').attr('text-anchor', 'end').style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', 4).style('stroke-linejoin', 'round').text(endLabel);
 
   const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
   const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
@@ -748,9 +752,10 @@ function drawTempo() {
   const measure = (texts, cls) => { const g = svg.append('g').attr('class', cls); const w = d3.max(texts, (t) => g.append('text').text(t).node().getComputedTextLength()) || 0; g.remove(); return w; };
   const last = rows[rows.length - 1];
   const endLabel = wert(last.v);
-  const m = { l: measure(yt.map(yf), 'tick') + 10, r: measure([endLabel], 'endlabel') + 14, t: 10, b: 26 };
+  const m = { l: measure(yt.map(yf), 'tick') + 10, r: 7, t: 10, b: 26 };
   const x = d3.scaleUtc(d3.extent(rows, (r) => r.d), [m.l, W - m.r]);
   y.range([H - m.b, m.t]);
+  const vorher = rows[Math.max(0, rows.length - 4)].v, unten = vorher > last.v;
 
   svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => y(v)).attr('y2', (v) => y(v)).style('stroke', 'var(--grid)');
   svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'tick').attr('x', m.l - 8).attr('y', (v) => y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').text(yf);
@@ -761,7 +766,7 @@ function drawTempo() {
   svg.append('path').datum(rows).attr('d', d3.area((r) => x(r.d), y(0), (r) => y(r.v))).style('fill', 'color-mix(in srgb, var(--good) 14%, transparent)');
   svg.append('path').datum(rows).attr('d', d3.line((r) => x(r.d), (r) => y(r.v))).style('fill', 'none').style('stroke', 'var(--good)').attr('stroke-width', 2.5).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
   svg.append('circle').attr('cx', x(last.d)).attr('cy', y(last.v)).attr('r', 4.5).style('fill', 'var(--good)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
-  svg.append('text').attr('class', 'endlabel').attr('x', x(last.d) + 8).attr('y', y(last.v)).attr('dy', '0.32em').style('fill', 'var(--good-ink)').text(endLabel);
+  svg.append('text').attr('class', 'endlabel').attr('x', x(last.d) + 4).attr('y', y(last.v) + (unten ? 18 : -18)).attr('dy', '0.32em').attr('text-anchor', 'end').style('fill', 'var(--good-ink)').style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', 4).style('stroke-linejoin', 'round').text(endLabel);
 
   const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
   const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
@@ -1163,7 +1168,7 @@ let neuerAufruf = true, verstecktSeit = 0;
 // Beim Zurückkehren in die App neue Messungen holen
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { verstecktSeit = Date.now(); return; }
-  if (verstecktSeit && Date.now() - verstecktSeit >= 5 * 60000) neuerAufruf = true;
+  if (verstecktSeit && Date.now() - verstecktSeit >= 5 * 60000) { neuerAufruf = true; rangeDays = 61; syncRange(); }
   verstecktSeit = 0; // Safari meldet „sichtbar“ manchmal doppelt
 
   if (Date.now() - lastLoad > 60000) boot();
