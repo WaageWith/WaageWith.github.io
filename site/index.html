@@ -625,7 +625,8 @@ $('more').addEventListener('click', () => { showAll = !showAll; drawWeeks(weeksA
 /* ---------- Tooltips bei Touch: Tippen außerhalb eines Diagramms blendet sie aus ---------- */
 let hideTips = [];
 document.addEventListener('pointerdown', (ev) => {
-  if (!ev.target.closest || !ev.target.closest('.chart')) hideTips.forEach((f) => f());
+  // Fenster bleibt nur beim Tippen in den Diagrammbereich; Achsen, Beschriftung, Rand und außerhalb blenden aus (seit 25.11.2026)
+  if (!ev.target.closest || !ev.target.closest('.plot')) hideTips.forEach((f) => f());
 });
 
 /* ---------- Gewichtskurve ---------- */
@@ -704,7 +705,7 @@ function drawChart(ziel) {
   const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
   const hl = hover.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--line)');
   const hd = hover.append('circle').attr('r', 5).style('fill', 'var(--fg)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
-  svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
+  svg.append('rect').attr('class', 'plot').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
     .style('fill', 'transparent')
     .on('pointermove pointerdown', (ev) => {
       const [px] = d3.pointer(ev, svg.node());
@@ -772,7 +773,7 @@ function drawTempo() {
   const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
   const hl = hover.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--line)');
   const hd = hover.append('circle').attr('r', 4.5).style('fill', 'var(--good)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
-  svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
+  svg.append('rect').attr('class', 'plot').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b)
     .style('fill', 'transparent')
     .on('pointermove pointerdown', (ev) => {
       const [px] = d3.pointer(ev, svg.node());
