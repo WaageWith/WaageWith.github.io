@@ -17,12 +17,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  # Hochladen und Veröffentlichen getrennt: Direkt nach dem Hochladen fand
+  # deploy-pages das Paket ab 24.11.2026 oft noch nicht.
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 6
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,5 +30,16 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Kurz warten, bis das Paket sichtbar ist
+        run: sleep 15
       - id: deployment
         uses: actions/deploy-pages@v5
