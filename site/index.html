@@ -168,7 +168,7 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 @media (min-width: 1100px) { .prog-paar { grid-template-columns: repeat(2, minmax(0, 1fr)); align-self: center; width: min(calc(100vw - 48px), 110rem); } }
 .prog-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.6rem; }
 .prog-stat { background: var(--grid); border-radius: 10px; padding: 0.65rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem; }
-.prog-stat .lbl { font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.05em; white-space: nowrap; text-transform: uppercase; color: var(--muted); }
+.prog-stat .lbl { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; text-transform: uppercase; color: var(--muted); }
 .prog-stat .v { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .prog-stat .v small { font-size: 0.55em; font-weight: 600; color: var(--muted); margin-left: 0.3em; letter-spacing: 0; }
 .prog-stat.main { background: var(--tile); }
@@ -1148,7 +1148,7 @@ function progStats(k, { art, pr, lastT }) {
   };
   k.querySelector('.prog-stats').replaceChildren(
     stat('Endgewicht', 'ca. ' + kg0(pr.end), 'kg', `95 %: ${kg0(pr.lo)}–${kg0(pr.hi)} kg`, true),
-    stat('Noch weniger', sinkt ? 'ca. ' + kg0(rest) : '–', sinkt ? 'kg' : '', `ab ${kg1(pr.jetzt)} kg heute`),
+    stat('Noch abzunehmen', sinkt ? 'ca. ' + kg0(rest) : '–', sinkt ? 'kg' : '', `ab ${kg1(pr.jetzt)} kg heute`),
     stat('Hälfte davon', sinkt ? fMonJahr.format(halb) : '–', '', sinkt ? `bei ca. ${kg0(pr.end + rest / 2)} kg` : ''),
     stat('90 % davon', sinkt ? fMonJahr.format(neunzig) : '–', '', sinkt ? `bei ca. ${kg0(pr.end + rest / 10)} kg` : ''),
   );
