@@ -222,6 +222,8 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .kcalv { font-size: 13px; font-weight: 600; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .barlabel { fill: var(--fg); font-size: 13px; font-weight: 700; font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .legend .l-dash { width: 14px; height: 0; border-top: 2px dashed var(--accent); }
+.legend .l-dash.good { border-top-color: var(--good); }
+.legend .l-band.good { background: color-mix(in srgb, var(--good) 16%, transparent); }
 .legend .l-ci { width: 9px; height: 12px; box-sizing: border-box; border: solid var(--fg); border-width: 1.5px 0; background: linear-gradient(var(--fg), var(--fg)) center / 1.5px 100% no-repeat; opacity: 0.75; }
 .tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(16, 24, 40, 0.14); padding: 0.375rem 0.625rem; font-size: 0.875rem; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
 .tip .d { color: var(--muted); font-size: 0.8125rem; }
@@ -343,6 +345,9 @@ html { -webkit-text-size-adjust: 100%; }
     </div>
     <div class="prog-stats" id="prog-stats"></div>
     <div class="chart" id="chart-prog"></div>
+    <h3>Abnahme pro Woche</h3>
+    <div class="legend"><span><i class="l-line good"></i>bisher Ø 4 Wochen</span><span><i class="l-dash good"></i>Prognose (ab Ø 12 Wochen)</span><span><i class="l-band good"></i>95-%-Bereich</span></div>
+    <div class="chart" id="chart-prog-tempo"></div>
     <h3>Prognose im Verlauf</h3>
     <div class="legend"><span>Endgewicht, wie es an diesem Tag berechnet wurde</span><span><i class="l-line"></i>Prognose</span><span><i class="l-band"></i>95-%-Bereich</span></div>
     <div class="chart" id="chart-prog-verlauf"></div>
@@ -1053,6 +1058,7 @@ function drawPrognose() {
     + 'deshalb wird die Abnahme immer langsamer. 7.700 kcal pro kg sind ein Durchschnittswert. Rechnet täglich mit den neuen Messungen neu.';
 
   drawProgKurve(pr);
+  drawProgTempo(pr);
   drawProgVerlauf();
 }
 
@@ -1070,7 +1076,7 @@ function drawProgKurve(pr) {
     zukunft.push({ d: new Date(lastT + k * DAY), w: progKurve(pr, k), lo: quant(ws, 0.025), hi: quant(ws, 0.975) });
   }
   const yMin = Math.min(d3.min(zukunft, (r) => r.lo), pr.end) - 1, yMax = d3.max(mess, (r) => r.w) + 1;
-  const m = { l: 34, r: 8, t: 22, b: 26 };
+  const m = { l: PROG_ML, r: 8, t: 22, b: 26 };
   const y = d3.scaleLinear([yMin, yMax], [H - m.b, m.t]).nice();
   const x = d3.scaleUtc([mess[0].d, new Date(bisT)], [m.l, W - m.r]);
   const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Gewicht und Prognose');
@@ -1130,6 +1136,86 @@ function drawProgKurve(pr) {
         cx = x(r.d); cy = y(r.w);
         tip.replaceChildren(el('div', 'd', `Prognose für ${fLong.format(r.d)} ${r.d.getUTCFullYear()}`), el('div', 'k', 'ca. ' + kg1(r.w) + ' kg'), el('div', 's', `95 %: ${kg1(r.lo)}–${kg1(r.hi)} kg`));
       }
+      hover.style('display', null); hl.attr('x1', cx).attr('x2', cx); hd.attr('cx', cx).attr('cy', cy);
+      tip.hidden = false; tipSetzen(box, tip, W, cx, cy);
+    })
+    .on('pointerleave', (ev) => { if (ev.pointerType === 'mouse') { hover.style('display', 'none'); tip.hidden = true; } });
+  hideTips.push(() => { hover.style('display', 'none'); tip.hidden = true; });
+}
+
+// Abnahme pro Woche: bisher wie Karte „Abnahme pro Woche“ (Ø 4 Wochen), danach Prognose. Die Prognose beginnt beim
+// Tempo der letzten 12 Wochen (Grundlage der Rechnung) und halbiert sich alle ~8 Monate (Ableitung der Gewichtskurve).
+// Gleiche Zeitachse wie die Gewichtskurve darüber.
+const PROG_ML = 50;
+function drawProgTempo(pr) {
+  const box = $('chart-prog-tempo');
+  box.replaceChildren();
+  const W = Math.max(280, box.clientWidth), H = 260;
+  box.style.minHeight = H + 'px';
+  const lastT = pr.t, bisT = lastT + Math.round(3 * pr.tau) * DAY;
+  const rate = (v, k) => (pr.jetzt - v.end) / v.tau * 7 * Math.exp(-k / v.tau); // kg pro Woche, positiv = abgenommen
+  const bisher = [];
+  for (let t = pts[0].t; t <= lastT; t += DAY) {
+    const tr = trend28(t);
+    if (tr && tr.kgWoche != null && tr.spanne >= 14 && tr.luecke <= 7) bisher.push({ d: new Date(t), v: tr.kgWoche });
+  }
+  const punkt = (k) => { const vs = pr.varianten.map((v) => rate(v, k)); return { d: new Date(lastT + k * DAY), v: rate(pr, k), lo: quant(vs, 0.025), hi: quant(vs, 0.975) }; };
+  const zukunft = [];
+  for (let k = 0; lastT + k * DAY <= bisT; k += 7) zukunft.push(punkt(k));
+  const monate = d3.utcMonth.range(d3.utcMonth.ceil(new Date(lastT + DAY)), new Date(bisT + 1)).map((d) => punkt((d - lastT) / DAY));
+  const wert = (v) => (v > 0 ? '−' : v < 0 ? '+' : '') + nf(0).format(Math.abs(Math.round(v * 100) * 10)) + ' g';
+  const m = { l: PROG_ML, r: 8, t: 22, b: 26 };
+  const y = d3.scaleLinear([Math.min(0, d3.min(zukunft, (r) => r.lo)), Math.max(d3.max(bisher, (r) => r.v) || 0, d3.max(zukunft, (r) => r.hi)) * 1.08], [H - m.b, m.t]).nice();
+  const x = d3.scaleUtc([pts[0].t, bisT], [m.l, W - m.r]);
+  const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Abnahme pro Woche, Prognose');
+  const yt = y.ticks(5);
+  svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => y(v)).attr('y2', (v) => y(v)).style('stroke', 'var(--grid)');
+  svg.append('g').selectAll('text').data(yt).join('text').attr('class', 'tick').attr('x', m.l - 8).attr('y', (v) => y(v)).attr('dy', '0.32em').attr('text-anchor', 'end')
+    .text((v) => (v === 0 ? '0' : nf(0).format(Math.round(v * 1000)) + ' g'));
+  const xt = d3.utcMonth.every(3).range(d3.utcMonth.ceil(new Date(pts[0].t)), new Date(bisT));
+  svg.append('g').selectAll('text').data(xt).join('text').attr('class', 'tick').attr('x', (d) => x(d)).attr('y', H - 6).attr('text-anchor', 'middle')
+    .style('fill', (d) => (d.getUTCMonth() === 0 ? 'var(--fg)' : null)).text((d) => (d.getUTCMonth() === 0 ? d.getUTCFullYear() : fMon.format(d)));
+  svg.append('g').selectAll('line').data(xt.filter((d) => d.getUTCMonth() === 0)).join('line')
+    .attr('x1', (d) => x(d)).attr('x2', (d) => x(d)).attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--line)');
+  svg.append('line').attr('x1', x(lastT)).attr('x2', x(lastT)).attr('y1', m.t - 8).attr('y2', H - m.b).style('stroke', 'var(--muted)').attr('stroke-dasharray', '3 3').style('opacity', 0.6);
+  svg.append('text').attr('class', 'tick').attr('x', x(lastT)).attr('y', m.t - 12).attr('text-anchor', 'middle').text('heute');
+  svg.append('path').datum(bisher).attr('d', d3.area((r) => x(r.d), y(0), (r) => y(r.v))).style('fill', 'color-mix(in srgb, var(--good) 14%, transparent)');
+  svg.append('path').datum(bisher).attr('d', d3.line((r) => x(r.d), (r) => y(r.v))).style('fill', 'none').style('stroke', 'var(--good)').attr('stroke-width', 2.5).attr('stroke-linejoin', 'round');
+  svg.append('path').datum(zukunft).attr('d', d3.area((r) => x(r.d), (r) => y(r.lo), (r) => y(r.hi))).style('fill', 'color-mix(in srgb, var(--good) 16%, transparent)');
+  svg.append('path').datum(zukunft).attr('d', d3.line((r) => x(r.d), (r) => y(r.v))).style('fill', 'none').style('stroke', 'var(--good)').attr('stroke-width', 2.5).attr('stroke-dasharray', '7 5');
+  // Marken wie in der Gewichtskurve: Hälfte, 90 %
+  if (pr.jetzt - pr.end >= 1) {
+    [[Math.LN2, 'Hälfte'], [Math.LN10, '90 %']].forEach(([f, txt]) => {
+      const k = pr.tau * f, v = rate(pr, k);
+      svg.append('circle').attr('cx', x(lastT + k * DAY)).attr('cy', y(v)).attr('r', 4.5).style('fill', 'var(--good)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
+      svg.append('text').attr('class', 'tick').attr('x', x(lastT + k * DAY)).attr('y', y(v) - 14).attr('text-anchor', 'middle').style('fill', 'var(--fg)')
+        .style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', 4).text(`${txt} · ${wert(v)}`);
+    });
+  }
+  const start = zukunft[0];
+  svg.append('circle').attr('cx', x(start.d)).attr('cy', y(start.v)).attr('r', 4.5).style('fill', 'var(--good)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
+  svg.append('text').attr('class', 'endlabel').attr('x', x(start.d) + 8).attr('y', y(start.v) - 14).style('fill', 'var(--good-ink)')
+    .style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', 4).text(`${wert(start.v)} (Ø 12 Wochen)`);
+
+  const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
+  const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
+  const hl = hover.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--line)');
+  const hd = hover.append('circle').attr('r', 4.5).style('fill', 'var(--good)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
+  svg.append('rect').attr('class', 'plot').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b).style('fill', 'transparent')
+    .on('pointermove pointerdown', (ev) => {
+      const [px] = d3.pointer(ev, svg.node());
+      const t0 = x.invert(px);
+      let r, kopf, extra;
+      if (t0 <= lastT && bisher.length) {
+        r = d3.least(bisher, (q) => Math.abs(q.d - t0));
+        kopf = `${fLong.format(r.d)} ${r.d.getUTCFullYear()}`; extra = 'Ø 4 Wochen';
+      } else {
+        r = d3.least(monate, (q) => Math.abs(q.d - t0));
+        kopf = `Prognose für ${fLong.format(r.d)} ${r.d.getUTCFullYear()}`; extra = `95 %: ${wert(r.hi)} bis ${wert(r.lo)}`;
+      }
+      const cx = x(r.d), cy = y(r.v);
+      const line = el('div'); line.append(el('b', null, wert(r.v)), document.createTextNode(' pro Woche'));
+      tip.replaceChildren(el('div', 'd', kopf), line, el('div', 's', extra));
       hover.style('display', null); hl.attr('x1', cx).attr('x2', cx); hd.attr('cx', cx).attr('cy', cy);
       tip.hidden = false; tipSetzen(box, tip, W, cx, cy);
     })
