@@ -1107,7 +1107,11 @@ function drawProgKurve(pr) {
   svg.append('text').attr('class', 'endlabel').attr('x', W - m.r).attr('y', y(pr.end) + 16).attr('text-anchor', 'end').style('fill', 'var(--accent)')
     .style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', 4).text(`ca. ${kg0(pr.end)} kg`);
 
-  // Hover: bisher = Messung, später = Prognose mit Bereich
+  // Hover: bisher = Messung, später = Prognose zum Monatsersten (ein Wert pro Monat) mit Bereich
+  const monate = d3.utcMonth.range(d3.utcMonth.ceil(new Date(lastT + DAY)), new Date(bisT + 1)).map((d) => {
+    const k = (d - lastT) / DAY, ws = pr.varianten.map((v) => v.end + (pr.jetzt - v.end) * Math.exp(-k / v.tau));
+    return { d, w: progKurve(pr, k), lo: quant(ws, 0.025), hi: quant(ws, 0.975) };
+  });
   const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
   const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
   const hl = hover.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--line)');
@@ -1122,9 +1126,9 @@ function drawProgKurve(pr) {
         cx = x(r.d); cy = y(r.w);
         tip.replaceChildren(el('div', 'd', fLong.format(r.d) + ' ' + r.d.getUTCFullYear()), el('div', 'k', kg1(r.w) + ' kg'), el('div', 's', '7-Tage-Schnitt ' + kg1(r.tr) + ' kg'));
       } else {
-        const r = d3.least(zukunft, (q) => Math.abs(q.d - t0));
+        const r = d3.least(monate, (q) => Math.abs(q.d - t0));
         cx = x(r.d); cy = y(r.w);
-        tip.replaceChildren(el('div', 'd', 'Prognose ' + fMonJahr.format(r.d)), el('div', 'k', 'ca. ' + kg1(r.w) + ' kg'), el('div', 's', `95 %: ${kg1(r.lo)}–${kg1(r.hi)} kg`));
+        tip.replaceChildren(el('div', 'd', `Prognose für ${fLong.format(r.d)} ${r.d.getUTCFullYear()}`), el('div', 'k', 'ca. ' + kg1(r.w) + ' kg'), el('div', 's', `95 %: ${kg1(r.lo)}–${kg1(r.hi)} kg`));
       }
       hover.style('display', null); hl.attr('x1', cx).attr('x2', cx); hd.attr('cx', cx).attr('cy', cy);
       tip.hidden = false; tipSetzen(box, tip, W, cx, cy);
