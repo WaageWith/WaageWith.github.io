@@ -346,7 +346,7 @@ html { -webkit-text-size-adjust: 100%; }
     <div class="prog-stats" id="prog-stats"></div>
     <div class="chart" id="chart-prog"></div>
     <h3>Abnahme pro Woche</h3>
-    <div class="legend"><span><i class="l-line good"></i>bisher Ø 4 Wochen</span><span><i class="l-dash good"></i>Prognose (ab Ø 12 Wochen)</span><span><i class="l-band good"></i>95-%-Bereich</span></div>
+    <div class="legend"><span><i class="l-line good"></i>bisher Ø 4 Wochen</span><span><i class="l-dash good"></i>Prognose</span><span><i class="l-band good"></i>95-%-Bereich</span></div>
     <div class="chart" id="chart-prog-tempo"></div>
     <h3>Prognose im Verlauf</h3>
     <div class="legend"><span>Endgewicht, wie es an diesem Tag berechnet wurde</span><span><i class="l-line"></i>Prognose</span><span><i class="l-band"></i>95-%-Bereich</span></div>
@@ -981,10 +981,12 @@ function drawWochenKompakt(box, rows) {
 /* ---------- Prognose Endgewicht (nur PC, seit 27.11.2026) ---------- */
 // Energiebilanz: Bleibt das Essen gleich, wird die Abnahme langsamer, weil ein leichterer Körper weniger verbraucht
 // (pro kg weniger ca. 18–26 kcal/Tag, Mitte 22). Endgewicht = Trend heute − Defizit heute ÷ 22 kcal/kg.
-// Defizit heute = Steigung der Trendlinie der letzten 12 Wochen × 7.700 kcal/kg. Annäherung ans Endgewicht
+// Defizit heute = Steigung der Trendlinie der letzten 4 Wochen × 7.700 kcal/kg (dieselbe Trendlinie wie Kachel „Pro Woche“
+// und Karte „Abnahme pro Woche“, damit die Prognose genau am heutigen Tempo anschließt; 28.11.2026, vorher 12 Wochen,
+// lag deutlich unter dem aktuellen Tempo). Annäherung ans Endgewicht
 // exponentiell mit Zeitkonstante 7.700 ÷ 22 = 350 Tage (Hälfte des Rests nach ~8 Monaten).
 // 95-%-Bereich: Unsicherheit der Steigung (für Tag-zu-Tag-Zusammenhang der Messungen korrigiert) × 18–26 kcal/kg.
-const PROG_FENSTER = 84, PROG_MIN_TAGE = 56, PROG_MIN_N = 20, KCAL_KG = 7700, EPS = 22;
+const PROG_FENSTER = 28, PROG_MIN_TAGE = 21, PROG_MIN_N = 12, KCAL_KG = 7700, EPS = 22;
 function normInv(p) { // Quantil der Standardnormalverteilung (Acklam)
   const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239];
   const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
@@ -1000,10 +1002,11 @@ const PROG_Z = Array.from({ length: 41 }, (_, i) => normInv((i + 0.5) / 41));
 const PROG_E = Array.from({ length: 9 }, (_, i) => 18 + i); // 18 … 26 kcal pro kg und Tag
 const quant = (arr, p) => { const s = [...arr].sort((u, v) => u - v), i = (s.length - 1) * p, lo = Math.floor(i); return s[lo] + (s[Math.min(lo + 1, s.length - 1)] - s[lo]) * (i - lo); };
 
-// Prognose mit allen Messungen der 84 Tage bis einschließlich t (null, wenn zu wenige Daten)
+// Prognose mit allen Messungen der 28 Tage bis einschließlich t (null, wenn zu wenige Daten oder Lücke > 7 Tage)
 function prognose(t) {
   const f = pts.filter((p) => p.t > t - PROG_FENSTER * DAY && p.t <= t);
   if (f.length < PROG_MIN_N || (t - f[0].t) / DAY < PROG_MIN_TAGE) return null;
+  if (f.some((p, i) => (i ? p.t - f[i - 1].t : 0) > 7 * DAY) || t - f[f.length - 1].t > 7 * DAY) return null;
   const xs = f.map((p) => (p.t - t) / DAY), n = f.length;
   const mx = xs.reduce((s, v) => s + v, 0) / n, my = mean(f);
   const sxx = xs.reduce((s, v) => s + (v - mx) ** 2, 0);
@@ -1053,7 +1056,7 @@ function drawPrognose() {
     stat('90 % davon', sinkt ? fMonJahr.format(neunzig) : '–', '', sinkt ? `bei ca. ${kg0(pr.end + rest / 10)} kg` : ''),
   );
   const proWoche = -pr.b * 7, defizit = -pr.b * KCAL_KG;
-  $('prog-note').textContent = `Annahme: Essen und Bewegung bleiben wie in den letzten 12 Wochen (Trend ${proWoche >= 0 ? '−' : '+'}${nf(0).format(Math.abs(Math.round(proWoche * 100) * 10))} g/Woche, `
+  $('prog-note').textContent = `Annahme: Essen und Bewegung bleiben wie in den letzten 4 Wochen (Trend ${proWoche >= 0 ? '−' : '+'}${nf(0).format(Math.abs(Math.round(proWoche * 100) * 10))} g/Woche, `
     + `≈ ${nf(0).format(Math.abs(Math.round(defizit / 10) * 10))} kcal/Tag ${defizit >= 0 ? 'unter' : 'über'} dem Verbrauch). Pro kg weniger verbraucht der Körper ca. 18–26 kcal/Tag weniger, `
     + 'deshalb wird die Abnahme immer langsamer. 7.700 kcal pro kg sind ein Durchschnittswert. Rechnet täglich mit den neuen Messungen neu.';
 
@@ -1144,7 +1147,7 @@ function drawProgKurve(pr) {
 }
 
 // Abnahme pro Woche: bisher wie Karte „Abnahme pro Woche“ (Ø 4 Wochen), danach Prognose. Die Prognose beginnt beim
-// Tempo der letzten 12 Wochen (Grundlage der Rechnung) und halbiert sich alle ~8 Monate (Ableitung der Gewichtskurve).
+// heutigen Tempo (Ø 4 Wochen, Grundlage der Rechnung) und halbiert sich alle ~8 Monate (Ableitung der Gewichtskurve).
 // Gleiche Zeitachse wie die Gewichtskurve darüber.
 const PROG_ML = 50;
 function drawProgTempo(pr) {
@@ -1195,7 +1198,7 @@ function drawProgTempo(pr) {
   const start = zukunft[0];
   svg.append('circle').attr('cx', x(start.d)).attr('cy', y(start.v)).attr('r', 4.5).style('fill', 'var(--good)').style('stroke', 'var(--panel)').attr('stroke-width', 2);
   svg.append('text').attr('class', 'endlabel').attr('x', x(start.d) + 8).attr('y', y(start.v) - 14).style('fill', 'var(--good-ink)')
-    .style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', 4).text(`${wert(start.v)} (Ø 12 Wochen)`);
+    .style('paint-order', 'stroke').style('stroke', 'var(--panel)').style('stroke-width', 4).text(wert(start.v));
 
   const tip = el('div', 'tip'); tip.hidden = true; box.append(tip);
   const hover = svg.append('g').style('display', 'none').style('pointer-events', 'none');
