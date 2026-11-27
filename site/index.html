@@ -1366,8 +1366,12 @@ async function geraet() {
 }
 async function aufrufMerken(zugang) {
   const app = navigator.standalone === true || ['standalone', 'fullscreen', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches);
-  const eintrag = { t: new Date().toISOString(), id: geraeteId(), art: app ? 'App' : 'Browser', zugang, ...await geraet() };
+  nutzungSichern();
+  sitzung = { typ: 'nutzung', sid: crypto.randomUUID().slice(0, 8), id: geraeteId(), dauer: 0, bis: '', tiefe: 0, aktionen: {} };
+  sichtbarSeit = document.visibilityState === 'visible' ? Date.now() : 0; bisIdx = -1;
+  const eintrag = { t: new Date().toISOString(), id: geraeteId(), sid: sitzung.sid, art: app ? 'App' : 'Browser', zugang, ...await geraet() };
   aufrufe.set([...aufrufe.get(), eintrag]);
+  requestAnimationFrame(sichtbarPruefen);
   aufrufeSenden();
 }
 // Einmal-Schlüsselpaar je Eintrag + ECDH mit dem Minix-Schlüssel → HKDF → AES-GCM
@@ -1389,7 +1393,7 @@ async function aufrufeSenden() {
   sendet = true;
   try {
     while (aufrufe.get().length) {
-      const res = await fetch(AUFRUF_URL, { method: 'POST', body: JSON.stringify(await verschluesseln(aufrufe.get()[0])) });
+      const res = await fetch(AUFRUF_URL, { method: 'POST', keepalive: true, body: JSON.stringify(await verschluesseln(aufrufe.get()[0])) });
       if (!res.ok) break;
       aufrufe.set(aufrufe.get().slice(1));
     }
@@ -1397,10 +1401,63 @@ async function aufrufeSenden() {
 }
 let neuerAufruf = true, verstecktSeit = 0;
 
+/* ---------- Nutzung je Aufruf (seit 28.11.2026) ---------- */
+// Pro Aufruf: Dauer (sichtbare Zeit), bis zu welcher Karte gescrollt wurde, Scrolltiefe in %, und je Karte
+// Antippen (Handy), Hover (Maus) und Schalter. Geht beim Verlassen der Seite als eine Zusammenfassung (typ „nutzung“,
+// gleiche sid wie der Aufruf) über denselben Weg wie die Aufrufe; bei Rückkehr < 5 Min. läuft sie weiter und wird
+// beim nächsten Verlassen mit den neuen Summen erneut geschickt (Minix nimmt die letzte).
+const KARTEN = { wochen: 'Wochenliste', tempo: 'Tempo-Kurve', saeulen: 'Wochen-Säulen', verlauf: 'Gewicht', monate: 'Monate',
+  prognose: 'Prognose', wtage: 'Wochentage', kalender: 'Kalender' };
+let sitzung = null, sichtbarSeit = 0, gesendetStand = '', bisIdx = -1;
+function zaehlen(was) { if (sitzung) sitzung.aktionen[was] = (sitzung.aktionen[was] || 0) + 1; }
+function karteVon(el) { const c = el?.closest?.('.card'); return c ? KARTEN[c.id] : null; }
+function sichtbarPruefen() {
+  if (!sitzung || $('app').hidden) return;
+  const vh = innerHeight, ids = Object.keys(KARTEN);
+  ids.forEach((id, i) => {
+    const el = $(id); if (!el || el.hidden || i <= bisIdx) return;
+    const r = el.getBoundingClientRect(); if (!r.height) return;
+    const zu = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+    if (zu >= Math.min(r.height * 0.5, vh * 0.4)) { bisIdx = i; sitzung.bis = KARTEN[id]; }
+  });
+  const h = document.documentElement.scrollHeight;
+  if (h) sitzung.tiefe = Math.max(sitzung.tiefe, Math.min(100, Math.round((scrollY + vh) / h * 100)));
+}
+let pruefenGeplant = false;
+addEventListener('scroll', () => { if (pruefenGeplant) return; pruefenGeplant = true; requestAnimationFrame(() => { pruefenGeplant = false; sichtbarPruefen(); }); }, { passive: true });
+document.addEventListener('pointerdown', (ev) => {
+  if (ev.pointerType === 'mouse') return;
+  const k = ev.target.closest?.('.chart, .kal') && karteVon(ev.target); if (k) zaehlen(k + ': tippen');
+}, { passive: true });
+document.addEventListener('pointerover', (ev) => {
+  if (ev.pointerType !== 'mouse') return;
+  const c = ev.target.closest?.('.chart, .kal'); if (!c || (ev.relatedTarget && c.contains(ev.relatedTarget))) return;
+  const k = karteVon(c); if (k) zaehlen(k + ': Hover');
+}, { passive: true });
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest?.('button'); if (!b) return;
+  if (b.closest('#range')) zaehlen('Gewicht: ' + b.textContent.trim());
+  else if (b.id === 'more') zaehlen('Wochenliste: ' + (showAll ? 'alle' : 'weniger'));
+  else if (b.id === 'themebtn') zaehlen('Hell/Dunkel');
+});
+$('wtage-ab').addEventListener('change', () => zaehlen('Wochentage: Datum ab'));
+function nutzungSichern() {
+  if (!sitzung) return;
+  if (sichtbarSeit) { sitzung.dauer += Math.round((Date.now() - sichtbarSeit) / 1000); sichtbarSeit = Date.now(); }
+  if (!sitzung.bis && !Object.keys(sitzung.aktionen).length) return; // nur Sperrbildschirm
+  const stand = JSON.stringify(sitzung);
+  if (stand === gesendetStand) return;
+  gesendetStand = stand;
+  aufrufe.set([...aufrufe.get().filter((e) => e.sid !== sitzung.sid || e.typ !== 'nutzung'), { ...sitzung, t: new Date().toISOString() }]);
+  aufrufeSenden();
+}
+addEventListener('pagehide', () => { nutzungSichern(); sichtbarSeit = 0; });
+
 // Beim Zurückkehren in die App neue Messungen holen
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') { verstecktSeit = Date.now(); return; }
+  if (document.visibilityState === 'hidden') { nutzungSichern(); sichtbarSeit = 0; verstecktSeit = Date.now(); return; }
   if (verstecktSeit && Date.now() - verstecktSeit >= 5 * 60000) { neuerAufruf = true; rangeDays = 61; syncRange(); }
+  else if (sitzung && !sichtbarSeit) sichtbarSeit = Date.now();
   verstecktSeit = 0; // Safari meldet „sichtbar“ manchmal doppelt
 
   if (Date.now() - lastLoad > 60000) boot();
