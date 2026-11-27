@@ -142,7 +142,10 @@ def fetch_measurements(token: str) -> list[dict]:
 def mit_startgewicht(cfg: dict) -> dict:
     """Startgewicht (Secret START_GEWICHT_KG) verschlüsselt mitgeben; die App nutzt es nur für „Abgenommen“."""
     kg = os.environ.get("START_GEWICHT_KG", "").strip().replace(",", ".")
-    return {**cfg, "start_gewicht_kg": float(kg)} if kg and cfg.get("start_datum") else cfg
+    cfg = {**cfg, "start_gewicht_kg": float(kg)} if kg and cfg.get("start_datum") else cfg
+    # Körpergröße (Secret GROESSE_CM) für das Normalgewicht laut BMI in der Prognose; nicht im öffentlichen Quelltext
+    cm = os.environ.get("GROESSE_CM", "").strip().replace(",", ".")
+    return {**cfg, "groesse_cm": float(cm)} if cm else cfg
 
 
 # ---------- Verschlüsselung für die App (AES-GCM, Schlüssel aus Passwort) ----------

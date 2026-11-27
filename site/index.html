@@ -175,6 +175,11 @@ h2 { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .prog-stat.main .lbl, .prog-stat.main .s, .prog-stat.main .v small { color: rgba(255, 255, 255, 0.82); }
 .prog-stat.main .v { color: #fff; }
 .prog-stat .s { font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.prog-ziel { background: var(--grid); border-radius: 10px; padding: 0.65rem 0.9rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 1rem; }
+.prog-ziel .lbl { flex-basis: 100%; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.prog-ziel .v { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.prog-ziel .v small { font-size: 0.55em; font-weight: 600; color: var(--muted); margin-left: 0.3em; letter-spacing: 0; }
+.prog-ziel .s { font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .prog-note { font-size: 0.8125rem; color: var(--muted); line-height: 1.5; margin: 0; }
 .prog-card h3 { margin: 0.5rem 0 0; font-size: 1rem; font-weight: 700; }
 .legend .l-band { width: 14px; height: 10px; border-radius: 2px; background: color-mix(in srgb, var(--accent) 16%, transparent); }
@@ -1102,6 +1107,7 @@ function progKarte(art) {
       <div class="legend"><span><i class="l-line"></i>7-Tage-Schnitt</span><span><i class="l-dash"></i>Prognose</span><span><i class="l-band"></i>95-%-Bereich</span></div>
     </div>
     <div class="prog-stats"></div>
+    <div class="prog-ziel" hidden></div>
     <div class="chart prog-kurve"></div>
     <h3>Abnahme pro Woche</h3>
     <div class="legend"><span><i class="l-line good"></i>bisher Ø ${art.wochen} Wochen</span><span><i class="l-dash good"></i>Prognose</span><span><i class="l-band good"></i>95-%-Bereich</span></div>
@@ -1152,10 +1158,33 @@ function progStats(k, { art, pr, lastT }) {
     stat('Hälfte davon', sinkt ? fMonJahr.format(halb) : '–', '', sinkt ? `bei ca. ${kg0(pr.end + rest / 2)} kg` : ''),
     stat('90 % davon', sinkt ? fMonJahr.format(neunzig) : '–', '', sinkt ? `bei ca. ${kg0(pr.end + rest / 10)} kg` : ''),
   );
+  progZiel(k, art, pr, lastT);
   const proWoche = -pr.b * 7, defizit = -pr.b * KCAL_KG;
   k.querySelector('.prog-note').textContent = `Annahme: Essen und Bewegung bleiben wie in den letzten ${art.wochen} Wochen (Trend ${wertG(proWoche)}/Woche, `
     + `≈ ${nf(0).format(Math.abs(Math.round(defizit / 10) * 10))} kcal/Tag ${defizit >= 0 ? 'unter' : 'über'} dem Verbrauch). Pro kg weniger verbraucht der Körper ca. 18–26 kcal/Tag weniger, `
     + 'deshalb wird die Abnahme immer langsamer. 7.700 kcal pro kg sind ein Durchschnittswert. Rechnet täglich mit den neuen Messungen neu.';
+}
+
+// Normalgewicht laut BMI (25): Wie viel weniger müsste dauerhaft gegessen werden? (seit 28.11.2026)
+// Im Gleichgewicht gilt: weniger Essen pro Tag = 18–26 kcal × kg weniger Endgewicht. Also
+// kcal weniger = 22 × (Endgewicht bei gleichem Essen − Normalgewicht). Dauer wie oben (Zeitkonstante 350 Tage).
+// Größe kommt verschlüsselt aus den Einstellungen (Secret GROESSE_CM), ohne Größe bleibt der Kasten leer.
+function progZiel(k, art, pr, lastT) {
+  const box = k.querySelector('.prog-ziel');
+  const cm = Number(cfg.groesse_cm);
+  box.hidden = !(cm > 100);
+  if (box.hidden) return;
+  const ziel = 25 * (cm / 100) ** 2;
+  const kcal = EPS * (pr.end - ziel);
+  const ks = pr.varianten.map((v) => (KCAL_KG / v.tau) * (v.end - ziel));
+  const r10 = (v) => nf(0).format(Math.round(v / 10) * 10);
+  const lbl = el('div', 'lbl', `Für Normalgewicht laut BMI (25 = ${kg1(ziel)} kg)`);
+  if (kcal <= 0) { box.replaceChildren(lbl, el('div', 'v', 'nicht nötig'), el('div', 's', 'Endgewicht liegt schon im Normalbereich')); return; }
+  const v = el('div', 'v', 'ca. ' + r10(kcal)); v.append(el('small', null, `kcal/Tag weniger als in den letzten ${art.wochen} Wochen`));
+  const weg = pr.jetzt - ziel;
+  const halb = new Date(lastT + pr.tau * Math.LN2 * DAY), fast = new Date(lastT + pr.tau * 3 * DAY);
+  box.replaceChildren(lbl, v, el('div', 's', `95 %: ${r10(quant(ks, 0.025))}–${r10(quant(ks, 0.975))} kcal · dann Hälfte des Wegs ${fMonJahr.format(halb)} (ca. ${kg0(ziel + weg / 2)} kg), `
+    + `95 % ${fMonJahr.format(fast)} (ca. ${kg0(ziel + weg / 20)} kg)`));
 }
 
 // Gewicht bisher (Messungen + 7-Tage-Schnitt) und Prognose bis 95 % erreicht

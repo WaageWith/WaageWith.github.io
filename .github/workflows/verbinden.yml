@@ -26,6 +26,7 @@ jobs:
       STATE_KEY: ${{ secrets.STATE_KEY }}
       DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
       START_GEWICHT_KG: ${{ secrets.START_GEWICHT_KG }}
+      GROESSE_CM: ${{ secrets.GROESSE_CM }}
       RELAY_TOPIC: waagewith-qy5jjsnr4wi487t4qsp2rvif
     steps:
       - uses: actions/checkout@v4
