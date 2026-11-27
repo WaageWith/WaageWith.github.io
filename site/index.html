@@ -318,7 +318,7 @@ html { -webkit-text-size-adjust: 100%; }
   </section>
 
   <section class="panel card" id="monate">
-    <div class="card-head barhead"><h2>Ø Abnahme pro Woche je Monat</h2>
+    <div class="card-head barhead"><h2>Abnahme pro Monat</h2>
       <div class="legend"><span><i class="l-sq"></i>abgenommen</span><span><i class="l-sq up"></i>zugenommen</span><span><i class="l-sq now"></i>läuft noch</span></div>
     </div>
     <div class="chart" id="chart-monate"></div>
@@ -407,9 +407,9 @@ function weeks() {
   return out;
 }
 
-// Ø Abnahme pro Woche je Kalendermonat:
-// 7-Tage-Schnitt am Monatsende minus 7-Tage-Schnitt am Ende des Vormonats (erster Monat: ab erster Messung),
-// umgerechnet auf 7 Tage. Laufender Monat bis zur letzten Messung. Weniger als 7 Tage: zählt zum Folgemonat.
+// Abnahme pro Kalendermonat (kg):
+// 7-Tage-Schnitt am Monatsende minus 7-Tage-Schnitt am Ende des Vormonats (erster Monat: ab erster Messung).
+// Summe aller Monate = Gesamtabnahme. Laufender Monat bis zur letzten Messung. Weniger als 7 Tage: zählt zum Folgemonat.
 function months() {
   const last = pts[pts.length - 1].t;
   const out = [];
@@ -424,7 +424,7 @@ function months() {
     const tage = (t - ref.t) / DAY;
     if (w != null && tage >= 7) {
       const abn = ref.w - w; // positiv = abgenommen
-      out.push({ key: anfang, label: fMon.format(new Date(anfang)), v: -(abn / tage) * 7, kcal: Math.round((abn * 7700) / tage / 10) * 10, laufend });
+      out.push({ key: anfang, label: fMon.format(new Date(anfang)), v: -abn, kg: true, kcal: Math.round((abn * 7700) / tage / 10) * 10, laufend });
       ref = { t, w };
     }
     if (laufend) break;
@@ -858,7 +858,7 @@ function drawBars(box, rows, titel, extras = []) {
     .attr('x', cx)
     .attr('y', (r) => (v(r) > 0 ? y(v(r)) - 7 : Math.max(y(0), y(v(r))) + 16))
     .style('fill', (r) => (v(r) > 0 ? 'var(--warn)' : 'var(--fg)'))
-    .text((r) => sign(v(r)) + g(Math.abs(v(r))) + ' g');
+    .text((r) => sign(v(r)) + (r.kg ? kg1(Math.abs(v(r))) + ' kg' : g(Math.abs(v(r))) + ' g'));
 
   svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'tick').style('font-size', fs.tick).attr('text-anchor', 'middle')
     .attr('x', cx).attr('y', yLab).text((r, i) => r.label(i, x.step() < 48));
@@ -965,7 +965,7 @@ function render() {
       key: r.kw, label: (i, schmal) => (schmal && i > 0 ? '' : 'KW ') + r.kw, v: -r.abn, kcal: r.laufend ? null : r.kcal, laufend: r.laufend,
     })), 'Abnahme pro Woche');
   }
-  drawBars($('chart-monate'), months().map((r) => ({ ...r, label: () => r.label })), 'Ø Abnahme pro Woche je Monat');
+  drawBars($('chart-monate'), months().map((r) => ({ ...r, label: () => r.label })), 'Abnahme pro Monat');
   const iso = (t) => new Date(t).toISOString().slice(0, 10);
   Object.assign($('wtage-ab'), { min: iso(pts[0].t), max: iso(pts[pts.length - 1].t), value: iso(wtAb) });
   const wt = wochentage(wtAb);
