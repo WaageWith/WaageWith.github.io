@@ -1070,7 +1070,7 @@ function progDaten(art) {
   const lastT = pts[pts.length - 1].t;
   const pr = prognose(lastT, art);
   if (!pr) return null;
-  const bisT = lastT + Math.round(Math.log(100) * pr.tau) * DAY; // bis 99 % erreicht (letzter Punkt ≈ Endgewicht)
+  const bisT = lastT + Math.round(3 * pr.tau) * DAY; // bis 95 % erreicht (bis 99 % war Fabian zu lang/unübersichtlich)
   const punkt = (k) => {
     const ws = pr.varianten.map((v) => v.end + (pr.jetzt - v.end) * Math.exp(-k / v.tau));
     const rs = pr.varianten.map((v) => progRate(pr, v, k));
@@ -1158,7 +1158,7 @@ function progStats(k, { art, pr, lastT }) {
     + 'deshalb wird die Abnahme immer langsamer. 7.700 kcal pro kg sind ein Durchschnittswert. Rechnet täglich mit den neuen Messungen neu.';
 }
 
-// Gewicht bisher (Messungen + 7-Tage-Schnitt) und Prognose bis 99 % erreicht
+// Gewicht bisher (Messungen + 7-Tage-Schnitt) und Prognose bis 95 % erreicht
 function progGewicht(box, { pr, lastT, zukunft, monate }, dom) {
   box.replaceChildren();
   const W = Math.max(280, box.clientWidth), H = 300;
@@ -1181,7 +1181,7 @@ function progGewicht(box, { pr, lastT, zukunft, monate }, dom) {
       halo(svg.append('text').attr('class', 'tick').attr('x', x(d)).attr('y', y(w) - 14).attr('text-anchor', 'middle').style('fill', 'var(--fg)')).text(`${txt} · ${kg0(w)} kg`);
     });
   }
-  halo(svg.append('text').attr('class', 'endlabel').attr('x', W - m.r).attr('y', y(pr.end) + 16).attr('text-anchor', 'end').style('fill', 'var(--accent)')).text(`ca. ${kg0(pr.end)} kg`);
+  halo(svg.append('text').attr('class', 'endlabel').attr('x', W - m.r).attr('y', y(pr.end) + 16).attr('text-anchor', 'end').style('fill', 'var(--accent)')).text(`Endgewicht ca. ${kg0(pr.end)} kg`); // gehört zur gepunkteten Linie, die Kurve erreicht sie nie ganz
   progHover(svg, box, W, H, m, x, 'var(--fg)', (t0) => {
     if (t0 <= lastT) {
       const r = d3.least(mess, (q) => Math.abs(q.d - t0));
